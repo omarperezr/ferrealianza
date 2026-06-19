@@ -12,16 +12,22 @@ export function OfflineSync() {
   const { accessToken } = useAuth();
   const [online, setOnline] = useState(isOnline());
   const [pending, setPending] = useState(0);
+  const [syncing, setSyncing] = useState(false);
 
   const refreshPending = async () => setPending(await pendingCount());
 
   const sync = async () => {
-    if (!accessToken || !isOnline()) return;
-    const synced = await flushOutbox(accessToken);
-    if (synced > 0) {
-      toast.success(`${synced} cambio(s) sincronizado(s)`, { id: 'sync' });
+    if (!accessToken || !isOnline() || syncing) return;
+    setSyncing(true);
+    try {
+      const synced = await flushOutbox(accessToken);
+      if (synced > 0) {
+        toast.success(`${synced} cambio(s) sincronizado(s)`, { id: 'sync' });
+      }
+    } finally {
+      setSyncing(false);
+      await refreshPending();
     }
-    await refreshPending();
   };
 
   useEffect(() => {
@@ -51,24 +57,31 @@ export function OfflineSync() {
 
   if (online && pending === 0) return null;
 
+  // Online with pending changes but not actively syncing => let the user retry.
+  const idlePending = online && pending > 0 && !syncing;
+
   return (
     <div className="fixed bottom-4 left-4 z-50">
-      <div
+      <button
+        type="button"
+        onClick={idlePending ? sync : undefined}
         className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium shadow-lg ${
           online ? 'bg-amber-500 text-slate-900' : 'bg-slate-800 text-white'
-        }`}
+        } ${idlePending ? 'cursor-pointer hover:brightness-95' : 'cursor-default'}`}
       >
         {online ? (
-          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+          <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
         ) : (
           <WifiOff className="w-3.5 h-3.5" />
         )}
-        {online
-          ? `Sincronizando ${pending} cambio(s)...`
-          : pending > 0
+        {!online
+          ? pending > 0
             ? `Sin conexión · ${pending} cambio(s) pendiente(s)`
-            : 'Sin conexión · modo local'}
-      </div>
+            : 'Sin conexión · modo local'
+          : syncing
+            ? `Sincronizando ${pending} cambio(s)...`
+            : `${pending} cambio(s) pendiente(s) · toca para reintentar`}
+      </button>
     </div>
   );
 }

@@ -29,7 +29,17 @@ export async function apiFetch(endpoint: string, options: ApiOptions = {}) {
   // public anon key (required by Supabase Edge Functions for public routes).
   headers['Authorization'] = `Bearer ${accessToken || publicAnonKey}`;
 
-  const response = await fetch(`${BASE_URL}${endpoint}`, { ...rest, headers, body });
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}${endpoint}`, { ...rest, headers, body });
+  } catch (e) {
+    // The request never reached the server (offline / network error). Mark it
+    // as transient so callers (e.g. the sync queue) can retry it later instead
+    // of discarding the operation.
+    const err = new Error('Sin conexión con el servidor') as Error & { network?: boolean };
+    err.network = true;
+    throw err;
+  }
 
   const rawBody = await response.text();
   let data: any = {};

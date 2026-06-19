@@ -217,44 +217,53 @@ export async function flushOutbox(accessToken: string | null): Promise<number> {
   if (flushing || !isOnline()) return 0;
   flushing = true;
   try {
-    let outbox = (await idbGet<OutboxOp[]>(OUTBOX_KEY)) || [];
+    const outbox = (await idbGet<OutboxOp[]>(OUTBOX_KEY)) || [];
     if (outbox.length === 0) return 0;
+
+    const runOp = (op: OutboxOp) => {
+      switch (op.kind) {
+        case 'client.create':
+          return apiFetch('/clients', { method: 'POST', accessToken, body: JSON.stringify(op.payload) });
+        case 'client.update':
+          return apiFetch(`/clients/${op.id}`, { method: 'PUT', accessToken, body: JSON.stringify(op.payload) });
+        case 'client.delete':
+          return apiFetch(`/clients/${op.id}`, { method: 'DELETE', accessToken });
+        case 'product.create':
+          return apiFetch('/products', { method: 'POST', accessToken, body: JSON.stringify(op.payload) });
+        case 'product.update':
+          return apiFetch(`/products/${op.code}`, { method: 'PUT', accessToken, body: JSON.stringify(op.payload) });
+        case 'product.delete':
+          return apiFetch(`/products/${op.code}`, { method: 'DELETE', accessToken });
+      }
+    };
 
     const remaining: OutboxOp[] = [];
     let synced = 0;
+    let changed = false;
 
-    for (const op of outbox) {
+    for (let i = 0; i < outbox.length; i++) {
+      const op = outbox[i];
       try {
-        switch (op.kind) {
-          case 'client.create':
-            await apiFetch('/clients', { method: 'POST', accessToken, body: JSON.stringify(op.payload) });
-            break;
-          case 'client.update':
-            await apiFetch(`/clients/${op.id}`, { method: 'PUT', accessToken, body: JSON.stringify(op.payload) });
-            break;
-          case 'client.delete':
-            await apiFetch(`/clients/${op.id}`, { method: 'DELETE', accessToken });
-            break;
-          case 'product.create':
-            await apiFetch('/products', { method: 'POST', accessToken, body: JSON.stringify(op.payload) });
-            break;
-          case 'product.update':
-            await apiFetch(`/products/${op.code}`, { method: 'PUT', accessToken, body: JSON.stringify(op.payload) });
-            break;
-          case 'product.delete':
-            await apiFetch(`/products/${op.code}`, { method: 'DELETE', accessToken });
-            break;
-        }
+        await runOp(op);
         synced++;
-      } catch {
-        remaining.push(op);
+        changed = true;
+      } catch (e: any) {
+        if (e?.network) {
+          // Lost connection: keep this op and everything after it for later,
+          // and stop trying for now.
+          remaining.push(...outbox.slice(i));
+          break;
+        }
+        // The server rejected the operation (e.g. duplicate code, invalid id).
+        // Retrying would loop forever, so discard it.
+        changed = true;
       }
     }
 
     await idbSet(OUTBOX_KEY, remaining);
 
     // Refresh caches from the server now that we are in sync.
-    if (synced > 0) {
+    if (changed) {
       await getProducts(accessToken);
       await getClients(accessToken);
     }
