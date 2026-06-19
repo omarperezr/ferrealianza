@@ -204,27 +204,45 @@ export function AdminDashboard() {
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
 
-      for (const row of jsonData) {
-        const productData = {
-          code: row.codigo || row.code || '',
-          name: row.nombre || row.name || '',
-          category: row.categoria || row.category || '',
-          amountPerPackage: row.cantidadPorPaquete || row.amountPerPackage || '',
-          price: row.precio || row.price || 0,
-          stock: row.stock || row.cantidadDisponible || 0,
-          imageUrl: ''
-        };
+      const products = jsonData.map((row) => ({
+        code: String(row.codigo ?? row.code ?? '').trim(),
+        name: String(row.nombre ?? row.name ?? '').trim(),
+        category: String(row.categoria ?? row.category ?? '').trim(),
+        amountPerPackage: String(row.cantidadPorPaquete ?? row.amountPerPackage ?? ''),
+        price: row.precio ?? row.price ?? 0,
+        stock: row.stock ?? row.cantidadDisponible ?? 0,
+        imageUrl: String(row.imageUrl ?? row.imagen ?? '').trim(),
+      })).filter((p) => p.code && p.name);
 
-        await apiFetch('/products', {
-          method: 'POST',
-          accessToken,
-          body: JSON.stringify(productData),
-        }).catch(() => {
-          // Skip rows that fail (e.g. duplicate code) and keep importing the rest.
-        });
-      }
+      const total = products.length;
+      let done = 0;
+      let ok = 0;
+      const queue = [...products];
 
-      toast.success(`${jsonData.length} productos procesados desde Excel`, { id: 'import' });
+      // Import in parallel batches for speed (instead of one-by-one).
+      const worker = async () => {
+        while (queue.length) {
+          const productData = queue.shift()!;
+          try {
+            await apiFetch('/products', {
+              method: 'POST',
+              accessToken,
+              body: JSON.stringify(productData),
+            });
+            ok++;
+          } catch {
+            // Skip rows that fail (e.g. duplicate code) and keep going.
+          }
+          done++;
+          if (done % 20 === 0 || done === total) {
+            toast.loading(`Importando ${done}/${total}...`, { id: 'import' });
+          }
+        }
+      };
+
+      await Promise.all(Array.from({ length: 6 }, worker));
+
+      toast.success(`${ok} de ${total} productos importados`, { id: 'import' });
       loadProducts();
     } catch (error) {
       toast.error('Error al importar productos desde Excel', { id: 'import' });
