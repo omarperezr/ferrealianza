@@ -10,6 +10,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   ShoppingCart,
@@ -25,6 +33,23 @@ import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { projectId } from "/utils/supabase/info";
 import { Logo } from "./Logo";
+import logoImage from "../../imports/image.png";
+
+const loadImageAsDataUrl = (src: string): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx?.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
 
 interface Product {
   code: string;
@@ -33,10 +58,20 @@ interface Product {
   amountPerPackage: string;
   price: number;
   imageUrl: string;
+  stock: number;
 }
 
 interface CartItem extends Product {
   quantity: number;
+}
+
+interface Client {
+  id: string;
+  name: string;
+  rif: string;
+  address: string;
+  vendorId: string;
+  vendorName: string;
 }
 
 export function UserDashboard() {
@@ -48,10 +83,59 @@ export function UserDashboard() {
   const [discount, setDiscount] = useState(0);
   const [tax, setTax] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [clientDialogOpen, setClientDialogOpen] = useState(false);
+  const [clientForm, setClientForm] = useState({ name: "", rif: "", address: "" });
 
   useEffect(() => {
     loadProducts();
+    loadClients();
   }, []);
+
+  const loadClients = async () => {
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-745f9946/clients`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setClients(data.clients || []);
+      }
+    } catch (error) {
+      toast.error("Error al cargar clientes");
+    }
+  };
+
+  const handleCreateClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-745f9946/clients`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(clientForm),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+
+      toast.success("Cliente registrado exitosamente");
+      setClientForm({ name: "", rif: "", address: "" });
+      setClientDialogOpen(false);
+      await loadClients();
+      setSelectedClientId(data.client.id);
+    } catch (error: any) {
+      toast.error(error.message || "Error al registrar cliente");
+    }
+  };
+
+  const selectedClient = clients.find((c) => c.id === selectedClientId) || null;
 
   const loadProducts = async () => {
     try {
@@ -114,16 +198,31 @@ export function UserDashboard() {
     return subtotal - discountAmount + taxAmount;
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
+    if (!selectedClient) {
+      toast.error("Selecciona un cliente para generar el presupuesto");
+      return;
+    }
+
     const doc = new jsPDF();
+
+    try {
+      const logoDataUrl = await loadImageAsDataUrl(logoImage);
+      doc.addImage(logoDataUrl, "PNG", 14, 10, 24, 24);
+    } catch (error) {
+      // If the logo can't be loaded, continue generating the PDF without it
+    }
 
     doc.setFontSize(18);
     doc.text("FERRE ALIANZA IMPORT, C.A.", 105, 20, { align: "center" });
     doc.setFontSize(12);
-    doc.text("Orden de Pedido", 105, 30, { align: "center" });
+    doc.text("Presupuesto", 105, 30, { align: "center" });
     doc.setFontSize(10);
-    doc.text(`Fecha: ${new Date().toLocaleDateString("es-ES")}`, 14, 40);
-    doc.text(`Cliente: ${user?.user_metadata?.name}`, 14, 46);
+    doc.text(`Fecha: ${new Date().toLocaleDateString("es-ES")}`, 14, 42);
+    doc.text(`Vendedor: ${user?.user_metadata?.name}`, 14, 48);
+    doc.text(`Cliente: ${selectedClient.name}`, 14, 56);
+    doc.text(`RIF: ${selectedClient.rif}`, 14, 62);
+    doc.text(`Dirección: ${selectedClient.address}`, 14, 68);
 
     const tableData = cart.map((item) => [
       item.code,
@@ -136,7 +235,7 @@ export function UserDashboard() {
     ]);
 
     autoTable(doc, {
-      startY: 55,
+      startY: 75,
       head: [
         [
           "Código",
@@ -320,6 +419,66 @@ export function UserDashboard() {
                 <DialogHeader>
                   <DialogTitle>Carrito de Compras</DialogTitle>
                 </DialogHeader>
+
+                <div className="flex items-end gap-2 pb-2 border-b">
+                  <div className="flex-1">
+                    <Label className="text-sm">Cliente</Label>
+                    <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un cliente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clients.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name} - {c.rif}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Dialog open={clientDialogOpen} onOpenChange={setClientDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button type="button" variant="outline">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Cliente
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Nuevo Cliente</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleCreateClient} className="space-y-4">
+                        <div>
+                          <Label>Nombre</Label>
+                          <Input
+                            value={clientForm.name}
+                            onChange={(e) => setClientForm({ ...clientForm, name: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label>RIF</Label>
+                          <Input
+                            value={clientForm.rif}
+                            onChange={(e) => setClientForm({ ...clientForm, rif: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label>Dirección</Label>
+                          <Input
+                            value={clientForm.address}
+                            onChange={(e) => setClientForm({ ...clientForm, address: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <Button type="submit" className="w-full">
+                          Registrar Cliente
+                        </Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
 
                 {cart.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">

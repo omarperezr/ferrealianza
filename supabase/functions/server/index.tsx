@@ -192,7 +192,7 @@ app.get("/make-server-745f9946/products/:code", authMiddleware, async (c) => {
 app.post("/make-server-745f9946/products", authMiddleware, adminMiddleware, async (c) => {
   try {
     const product = await c.req.json();
-    const { code, name, category, amountPerPackage, price, imageUrl } = product;
+    const { code, name, category, amountPerPackage, price, imageUrl, stock } = product;
 
     if (!code || !name || !category || !price) {
       return c.json({ error: 'Código, nombre, categoría y precio son requeridos' }, 400);
@@ -211,6 +211,7 @@ app.post("/make-server-745f9946/products", authMiddleware, adminMiddleware, asyn
       amountPerPackage: amountPerPackage || '',
       price: parseFloat(price),
       imageUrl: imageUrl || '',
+      stock: stock !== undefined && stock !== '' ? parseInt(stock, 10) : 0,
       createdAt: new Date().toISOString()
     };
 
@@ -238,6 +239,9 @@ app.put("/make-server-745f9946/products/:code", authMiddleware, adminMiddleware,
       ...updates,
       code, // Ensure code doesn't change
       price: updates.price ? parseFloat(updates.price) : existing.price,
+      stock: updates.stock !== undefined && updates.stock !== ''
+        ? parseInt(updates.stock, 10)
+        : existing.stock ?? 0,
       updatedAt: new Date().toISOString()
     };
 
@@ -305,16 +309,128 @@ app.post("/make-server-745f9946/upload-image", authMiddleware, adminMiddleware, 
   }
 });
 
+// ===== CLIENT ROUTES =====
+
+// Create client (associated to the logged-in vendor)
+app.post("/make-server-745f9946/clients", authMiddleware, async (c) => {
+  try {
+    const user = c.get('user');
+    const { name, rif, address } = await c.req.json();
+
+    if (!name || !rif || !address) {
+      return c.json({ error: 'Nombre, RIF y dirección son requeridos' }, 400);
+    }
+
+    const id = `${Date.now()}-${user.id}`;
+    const client = {
+      id,
+      name,
+      rif,
+      address,
+      vendorId: user.id,
+      vendorName: user.user_metadata?.name || user.email,
+      createdAt: new Date().toISOString()
+    };
+
+    await kv.set(`client:${id}`, client);
+    return c.json({ client });
+  } catch (error) {
+    console.log(`Error al crear cliente: ${error}`);
+    return c.json({ error: 'Error al crear cliente' }, 500);
+  }
+});
+
+// Get clients (vendors see only their own clients, admins see all)
+app.get("/make-server-745f9946/clients", authMiddleware, async (c) => {
+  try {
+    const user = c.get('user');
+    const userRole = user.user_metadata?.role || 'user';
+
+    const allClients = await kv.getByPrefix('client:');
+
+    const clients = userRole === 'admin'
+      ? allClients
+      : allClients.filter((client: any) => client.vendorId === user.id);
+
+    return c.json({ clients });
+  } catch (error) {
+    console.log(`Error al obtener clientes: ${error}`);
+    return c.json({ error: 'Error al obtener clientes' }, 500);
+  }
+});
+
+// Update client (owner vendor or admin only)
+app.put("/make-server-745f9946/clients/:id", authMiddleware, async (c) => {
+  try {
+    const user = c.get('user');
+    const userRole = user.user_metadata?.role || 'user';
+    const id = c.req.param('id');
+    const updates = await c.req.json();
+
+    const existing = await kv.get(`client:${id}`);
+    if (!existing) {
+      return c.json({ error: 'Cliente no encontrado' }, 404);
+    }
+
+    if (userRole !== 'admin' && existing.vendorId !== user.id) {
+      return c.json({ error: 'Acceso denegado - no eres el vendedor de este cliente' }, 403);
+    }
+
+    const updatedClient = {
+      ...existing,
+      name: updates.name ?? existing.name,
+      rif: updates.rif ?? existing.rif,
+      address: updates.address ?? existing.address,
+      updatedAt: new Date().toISOString()
+    };
+
+    await kv.set(`client:${id}`, updatedClient);
+    return c.json({ client: updatedClient });
+  } catch (error) {
+    console.log(`Error al actualizar cliente: ${error}`);
+    return c.json({ error: 'Error al actualizar cliente' }, 500);
+  }
+});
+
+// Delete client (owner vendor or admin only)
+app.delete("/make-server-745f9946/clients/:id", authMiddleware, async (c) => {
+  try {
+    const user = c.get('user');
+    const userRole = user.user_metadata?.role || 'user';
+    const id = c.req.param('id');
+
+    const existing = await kv.get(`client:${id}`);
+    if (!existing) {
+      return c.json({ error: 'Cliente no encontrado' }, 404);
+    }
+
+    if (userRole !== 'admin' && existing.vendorId !== user.id) {
+      return c.json({ error: 'Acceso denegado - no eres el vendedor de este cliente' }, 403);
+    }
+
+    await kv.del(`client:${id}`);
+    return c.json({ message: 'Cliente eliminado exitosamente' });
+  } catch (error) {
+    console.log(`Error al eliminar cliente: ${error}`);
+    return c.json({ error: 'Error al eliminar cliente' }, 500);
+  }
+});
+
 // ===== ORDER ROUTES =====
 
 // Create order
 app.post("/make-server-745f9946/orders", authMiddleware, async (c) => {
   try {
     const user = c.get('user');
-    const { items, discount, tax } = await c.req.json();
+    const { items, discount, tax, clientId } = await c.req.json();
 
     if (!items || items.length === 0) {
       return c.json({ error: 'El pedido debe contener al menos un producto' }, 400);
+    }
+
+    let client = null;
+    if (clientId) {
+      client = await kv.get(`client:${clientId}`);
     }
 
     const orderId = `order:${Date.now()}-${user.id}`;
@@ -322,6 +438,10 @@ app.post("/make-server-745f9946/orders", authMiddleware, async (c) => {
       id: orderId,
       userId: user.id,
       userName: user.user_metadata?.name || user.email,
+      clientId: client?.id || null,
+      clientName: client?.name || null,
+      clientRif: client?.rif || null,
+      clientAddress: client?.address || null,
       items,
       discount: discount || 0,
       tax: tax || 0,
