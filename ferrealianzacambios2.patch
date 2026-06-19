@@ -1,0 +1,1999 @@
+From 8f6e4a3f8aa57ad7e63c7b50ae5b2d3fc4d6c620 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 19 Jun 2026 02:26:11 +0000
+Subject: [PATCH] Perfil editable, presupuestos para admin, PDF mejorado y
+ compartir productos
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Añade un control de perfil en la cabecera para que cada usuario edite su
+  nombre; ese nombre se usa como nombre del vendedor (p. ej. en presupuestos)
+  y se persiste en los metadatos del usuario en Supabase.
+- El administrador ahora puede crear, editar y eliminar clientes (pestaña
+  Clientes) y generar presupuestos como un vendedor (nueva pestaña
+  Presupuestos), reutilizando el panel de ventas compartido.
+- Extrae el catálogo + carrito + presupuesto a un componente reutilizable
+  (SalesPanel) y un formulario de cliente reutilizable (ClientFormDialog).
+- Rediseña el PDF del presupuesto con cabecera de marca, recuadro de
+  cliente/vendedor, tabla con colores corporativos y bloque de totales.
+- Permite compartir los datos básicos de un producto y su foto a otras apps
+  (WhatsApp, etc.) usando la API nativa de compartir, con copia al
+  portapapeles como alternativa en escritorio.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01SFPacsM7jVbNB8TeTJStLV
+---
+ src/app/components/AdminDashboard.tsx   |  92 ++-
+ src/app/components/AuthContext.tsx      |  27 +-
+ src/app/components/ClientFormDialog.tsx | 115 ++++
+ src/app/components/ProfileButton.tsx    |  93 ++++
+ src/app/components/SalesPanel.tsx       | 709 ++++++++++++++++++++++++
+ src/app/components/UserDashboard.tsx    | 680 +----------------------
+ src/app/utils/share.ts                  |  74 +++
+ 7 files changed, 1099 insertions(+), 691 deletions(-)
+ create mode 100644 src/app/components/ClientFormDialog.tsx
+ create mode 100644 src/app/components/ProfileButton.tsx
+ create mode 100644 src/app/components/SalesPanel.tsx
+ create mode 100644 src/app/utils/share.ts
+
+diff --git a/src/app/components/AdminDashboard.tsx b/src/app/components/AdminDashboard.tsx
+index 1519954..165a888 100644
+--- a/src/app/components/AdminDashboard.tsx
++++ b/src/app/components/AdminDashboard.tsx
+@@ -16,9 +16,13 @@ import {
+   Package,
+   Users,
+   Loader2,
++  FileText,
+ } from 'lucide-react';
+ import * as XLSX from 'xlsx';
+ import { Logo } from './Logo';
++import { ProfileButton } from './ProfileButton';
++import { SalesPanel } from './SalesPanel';
++import { ClientFormDialog, Client } from './ClientFormDialog';
+ 
+ interface Product {
+   code: string;
+@@ -30,25 +34,17 @@ interface Product {
+   stock: number;
+ }
+ 
+-interface Client {
+-  id: string;
+-  name: string;
+-  rif: string;
+-  address: string;
+-  vendorId: string;
+-  vendorName: string;
+-  createdAt: string;
+-}
+-
+ export function AdminDashboard() {
+-  const { accessToken, signOut, user } = useAuth();
++  const { accessToken, signOut } = useAuth();
+   const [products, setProducts] = useState<Product[]>([]);
+   const [clients, setClients] = useState<Client[]>([]);
+-  const [view, setView] = useState<'products' | 'clients'>('products');
++  const [view, setView] = useState<'products' | 'clients' | 'sales'>('products');
+   const [loading, setLoading] = useState(true);
+   const [saving, setSaving] = useState(false);
+   const [importing, setImporting] = useState(false);
+   const [dialogOpen, setDialogOpen] = useState(false);
++  const [clientDialogOpen, setClientDialogOpen] = useState(false);
++  const [editingClient, setEditingClient] = useState<Client | null>(null);
+   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+   const [formData, setFormData] = useState({
+     code: '',
+@@ -75,6 +71,27 @@ export function AdminDashboard() {
+     }
+   };
+ 
++  const openNewClient = () => {
++    setEditingClient(null);
++    setClientDialogOpen(true);
++  };
++
++  const openEditClient = (client: Client) => {
++    setEditingClient(client);
++    setClientDialogOpen(true);
++  };
++
++  const handleDeleteClient = async (client: Client) => {
++    if (!confirm(`¿Eliminar al cliente "${client.name}"?`)) return;
++    try {
++      await apiFetch(`/clients/${client.id}`, { method: 'DELETE', accessToken });
++      toast.success('Cliente eliminado', { id: 'client-del' });
++      loadClients();
++    } catch (error: any) {
++      toast.error(error.message || 'Error al eliminar el cliente', { id: 'client-del' });
++    }
++  };
++
+   const loadProducts = async () => {
+     try {
+       const data = await apiFetch('/products', { accessToken });
+@@ -246,9 +263,7 @@ export function AdminDashboard() {
+             </div>
+           </div>
+           <div className="flex items-center gap-3">
+-            <span className="hidden sm:inline text-sm text-slate-300">
+-              {user?.user_metadata?.name}
+-            </span>
++            <ProfileButton />
+             <Button
+               variant="outline"
+               size="sm"
+@@ -256,7 +271,7 @@ export function AdminDashboard() {
+               className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700 hover:text-white"
+             >
+               <LogOut className="w-4 h-4 mr-2" />
+-              Salir
++              <span className="hidden sm:inline">Salir</span>
+             </Button>
+           </div>
+         </div>
+@@ -278,11 +293,26 @@ export function AdminDashboard() {
+             <Users className="w-4 h-4" />
+             Clientes
+           </button>
++          <button
++            className={`${tabBase} ${view === 'sales' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
++            onClick={() => setView('sales')}
++          >
++            <FileText className="w-4 h-4" />
++            Presupuestos
++          </button>
+         </div>
+ 
++        {view === 'sales' && <SalesPanel />}
++
+         {view === 'clients' && (
+           <div className="space-y-4">
+-            <h2 className="text-lg font-semibold text-slate-800">Todos los Clientes Registrados</h2>
++            <div className="flex items-center justify-between gap-2">
++              <h2 className="text-lg font-semibold text-slate-800">Clientes Registrados</h2>
++              <Button onClick={openNewClient}>
++                <Plus className="w-4 h-4 mr-2" />
++                Nuevo Cliente
++              </Button>
++            </div>
+             <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+               <table className="w-full text-sm">
+                 <thead>
+@@ -291,6 +321,7 @@ export function AdminDashboard() {
+                     <th className="p-3 font-semibold">RIF</th>
+                     <th className="p-3 font-semibold">Dirección</th>
+                     <th className="p-3 font-semibold">Vendedor</th>
++                    <th className="p-3 font-semibold text-right">Acciones</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+@@ -300,6 +331,25 @@ export function AdminDashboard() {
+                       <td className="p-3 text-slate-600">{client.rif}</td>
+                       <td className="p-3 text-slate-600">{client.address}</td>
+                       <td className="p-3 text-slate-600">{client.vendorName}</td>
++                      <td className="p-3">
++                        <div className="flex justify-end gap-2">
++                          <Button
++                            variant="outline"
++                            size="sm"
++                            onClick={() => openEditClient(client)}
++                          >
++                            <Pencil className="w-4 h-4" />
++                          </Button>
++                          <Button
++                            variant="ghost"
++                            size="sm"
++                            className="text-red-500 hover:text-red-700"
++                            onClick={() => handleDeleteClient(client)}
++                          >
++                            <Trash2 className="w-4 h-4" />
++                          </Button>
++                        </div>
++                      </td>
+                     </tr>
+                   ))}
+                 </tbody>
+@@ -311,6 +361,14 @@ export function AdminDashboard() {
+                 </div>
+               )}
+             </div>
++
++            <ClientFormDialog
++              accessToken={accessToken}
++              open={clientDialogOpen}
++              onOpenChange={setClientDialogOpen}
++              client={editingClient}
++              onSaved={() => loadClients()}
++            />
+           </div>
+         )}
+ 
+diff --git a/src/app/components/AuthContext.tsx b/src/app/components/AuthContext.tsx
+index fdbd95a..9709464 100644
+--- a/src/app/components/AuthContext.tsx
++++ b/src/app/components/AuthContext.tsx
+@@ -19,6 +19,7 @@ interface AuthContextType {
+   signIn: (email: string, password: string) => Promise<void>;
+   signUp: (email: string, password: string, name: string, role: string) => Promise<void>;
+   signOut: () => Promise<void>;
++  updateName: (name: string) => Promise<void>;
+   isAdmin: boolean;
+ }
+ 
+@@ -58,10 +59,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
+       body: JSON.stringify({ email, password }),
+     });
+ 
++    // Establish the session on the Supabase client so that profile updates
++    // (e.g. changing the display name) and session persistence work.
++    if (data.session?.access_token && data.session?.refresh_token) {
++      try {
++        await supabase.auth.setSession({
++          access_token: data.session.access_token,
++          refresh_token: data.session.refresh_token,
++        });
++      } catch {
++        // Non-fatal: we still keep the token in state below.
++      }
++    }
++
+     setUser(data.user);
+     setAccessToken(data.session.access_token);
+   };
+ 
++  const updateName = async (name: string) => {
++    const trimmed = name.trim();
++    if (!trimmed) throw new Error('El nombre no puede estar vacío');
++
++    const { data, error } = await supabase.auth.updateUser({
++      data: { name: trimmed },
++    });
++    if (error) throw new Error(error.message);
++    if (data.user) setUser(data.user as User);
++  };
++
+   const signUp = async (email: string, password: string, name: string, role: string) => {
+     await apiFetch('/auth/signup', {
+       method: 'POST',
+@@ -85,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
+   const isAdmin = user?.user_metadata?.role === 'admin';
+ 
+   return (
+-    <AuthContext.Provider value={{ user, accessToken, loading, signIn, signUp, signOut, isAdmin }}>
++    <AuthContext.Provider value={{ user, accessToken, loading, signIn, signUp, signOut, updateName, isAdmin }}>
+       {children}
+     </AuthContext.Provider>
+   );
+diff --git a/src/app/components/ClientFormDialog.tsx b/src/app/components/ClientFormDialog.tsx
+new file mode 100644
+index 0000000..b9ce2bd
+--- /dev/null
++++ b/src/app/components/ClientFormDialog.tsx
+@@ -0,0 +1,115 @@
++import { useState, useEffect, ReactNode } from 'react';
++import { apiFetch } from '../utils/api';
++import { Button } from '@/components/ui/button';
++import { Input } from '@/components/ui/input';
++import { Label } from '@/components/ui/label';
++import {
++  Dialog,
++  DialogContent,
++  DialogHeader,
++  DialogTitle,
++  DialogTrigger,
++} from '@/components/ui/dialog';
++import { toast } from 'sonner';
++import { Loader2 } from 'lucide-react';
++
++export interface Client {
++  id: string;
++  name: string;
++  rif: string;
++  address: string;
++  vendorId: string;
++  vendorName: string;
++  createdAt?: string;
++}
++
++interface ClientFormDialogProps {
++  accessToken: string | null;
++  open: boolean;
++  onOpenChange: (open: boolean) => void;
++  /** When provided, the dialog edits the client instead of creating one. */
++  client?: Client | null;
++  onSaved: (client: Client) => void;
++  trigger?: ReactNode;
++}
++
++const empty = { name: '', rif: '', address: '' };
++
++export function ClientFormDialog({
++  accessToken,
++  open,
++  onOpenChange,
++  client,
++  onSaved,
++  trigger,
++}: ClientFormDialogProps) {
++  const [form, setForm] = useState(empty);
++  const [saving, setSaving] = useState(false);
++  const isEdit = !!client;
++
++  useEffect(() => {
++    if (open) {
++      setForm(client ? { name: client.name, rif: client.rif, address: client.address } : empty);
++    }
++  }, [open, client]);
++
++  const handleSubmit = async (e: React.FormEvent) => {
++    e.preventDefault();
++    setSaving(true);
++    try {
++      const data = await apiFetch(isEdit ? `/clients/${client!.id}` : '/clients', {
++        method: isEdit ? 'PUT' : 'POST',
++        accessToken,
++        body: JSON.stringify(form),
++      });
++      toast.success(isEdit ? 'Cliente actualizado' : 'Cliente registrado', { id: 'client-save' });
++      onOpenChange(false);
++      onSaved(data.client);
++    } catch (error: any) {
++      toast.error(error.message || 'Error al guardar el cliente', { id: 'client-save' });
++    } finally {
++      setSaving(false);
++    }
++  };
++
++  return (
++    <Dialog open={open} onOpenChange={onOpenChange}>
++      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
++      <DialogContent className="max-w-md">
++        <DialogHeader>
++          <DialogTitle>{isEdit ? 'Editar Cliente' : 'Nuevo Cliente'}</DialogTitle>
++        </DialogHeader>
++        <form onSubmit={handleSubmit} className="space-y-4">
++          <div className="space-y-2">
++            <Label>Nombre</Label>
++            <Input
++              value={form.name}
++              onChange={(e) => setForm({ ...form, name: e.target.value })}
++              required
++            />
++          </div>
++          <div className="space-y-2">
++            <Label>RIF</Label>
++            <Input
++              value={form.rif}
++              onChange={(e) => setForm({ ...form, rif: e.target.value })}
++              required
++            />
++          </div>
++          <div className="space-y-2">
++            <Label>Dirección</Label>
++            <Input
++              value={form.address}
++              onChange={(e) => setForm({ ...form, address: e.target.value })}
++              required
++            />
++          </div>
++          <Button type="submit" className="w-full" disabled={saving}>
++            {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
++            {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Registrar Cliente'}
++          </Button>
++        </form>
++      </DialogContent>
++    </Dialog>
++  );
++}
+diff --git a/src/app/components/ProfileButton.tsx b/src/app/components/ProfileButton.tsx
+new file mode 100644
+index 0000000..90fe5c9
+--- /dev/null
++++ b/src/app/components/ProfileButton.tsx
+@@ -0,0 +1,93 @@
++import { useState, useEffect } from 'react';
++import { useAuth } from './AuthContext';
++import { Button } from '@/components/ui/button';
++import { Input } from '@/components/ui/input';
++import { Label } from '@/components/ui/label';
++import {
++  Dialog,
++  DialogContent,
++  DialogHeader,
++  DialogTitle,
++  DialogDescription,
++} from '@/components/ui/dialog';
++import { toast } from 'sonner';
++import { UserCircle, Loader2 } from 'lucide-react';
++
++/**
++ * Header control that shows the current user's display name and lets them edit
++ * it. This name is the one used as the vendor/seller name (e.g. in budgets).
++ */
++export function ProfileButton() {
++  const { user, updateName } = useAuth();
++  const [open, setOpen] = useState(false);
++  const [name, setName] = useState('');
++  const [saving, setSaving] = useState(false);
++
++  const currentName = user?.user_metadata?.name || '';
++
++  useEffect(() => {
++    if (open) setName(currentName);
++  }, [open, currentName]);
++
++  const handleSubmit = async (e: React.FormEvent) => {
++    e.preventDefault();
++    setSaving(true);
++    try {
++      await updateName(name);
++      toast.success('Nombre actualizado', { id: 'profile' });
++      setOpen(false);
++    } catch (error: any) {
++      toast.error(error.message || 'No se pudo actualizar el nombre', { id: 'profile' });
++    } finally {
++      setSaving(false);
++    }
++  };
++
++  return (
++    <>
++      <button
++        type="button"
++        onClick={() => setOpen(true)}
++        className="flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-slate-200 ring-1 ring-slate-700 hover:bg-slate-700 hover:text-white transition-colors"
++        title="Editar mi nombre"
++      >
++        <UserCircle className="w-4 h-4 text-amber-400" />
++        <span className="max-w-[140px] truncate">
++          {currentName || 'Configurar nombre'}
++        </span>
++      </button>
++
++      <Dialog open={open} onOpenChange={setOpen}>
++        <DialogContent className="max-w-md">
++          <DialogHeader>
++            <DialogTitle>Mi perfil</DialogTitle>
++            <DialogDescription>
++              Este nombre se usará como nombre del vendedor (por ejemplo, en los presupuestos).
++            </DialogDescription>
++          </DialogHeader>
++          <form onSubmit={handleSubmit} className="space-y-4">
++            <div className="space-y-2">
++              <Label>Nombre del usuario</Label>
++              <Input
++                value={name}
++                onChange={(e) => setName(e.target.value)}
++                placeholder="Ej. Juan Pérez"
++                required
++                autoFocus
++              />
++            </div>
++            {user?.email && (
++              <p className="text-xs text-slate-500">
++                Sesión: {user.email}
++              </p>
++            )}
++            <Button type="submit" className="w-full" disabled={saving}>
++              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
++              {saving ? 'Guardando...' : 'Guardar'}
++            </Button>
++          </form>
++        </DialogContent>
++      </Dialog>
++    </>
++  );
++}
+diff --git a/src/app/components/SalesPanel.tsx b/src/app/components/SalesPanel.tsx
+new file mode 100644
+index 0000000..5e8ff8f
+--- /dev/null
++++ b/src/app/components/SalesPanel.tsx
+@@ -0,0 +1,709 @@
++import { useState, useEffect } from "react";
++import { useAuth } from "./AuthContext";
++import { apiFetch } from "../utils/api";
++import { shareProduct } from "../utils/share";
++import { ClientFormDialog, Client } from "./ClientFormDialog";
++import { Button } from "@/components/ui/button";
++import { Input } from "@/components/ui/input";
++import { Card, CardContent } from "@/components/ui/card";
++import {
++  Dialog,
++  DialogContent,
++  DialogHeader,
++  DialogTitle,
++  DialogTrigger,
++} from "@/components/ui/dialog";
++import { Label } from "@/components/ui/label";
++import {
++  Select,
++  SelectContent,
++  SelectItem,
++  SelectTrigger,
++  SelectValue,
++} from "@/components/ui/select";
++import { toast } from "sonner";
++import {
++  ShoppingCart,
++  FileText,
++  Download,
++  Trash2,
++  Plus,
++  Minus,
++  Search,
++  Loader2,
++  Package,
++  UserPlus,
++  Share2,
++} from "lucide-react";
++import jsPDF from "jspdf";
++import autoTable from "jspdf-autotable";
++import * as XLSX from "xlsx";
++import logoImage from "../../imports/image.png";
++
++const loadImageAsDataUrl = (src: string): Promise<string> =>
++  new Promise((resolve, reject) => {
++    const img = new Image();
++    img.crossOrigin = "anonymous";
++    img.onload = () => {
++      const canvas = document.createElement("canvas");
++      canvas.width = img.width;
++      canvas.height = img.height;
++      const ctx = canvas.getContext("2d");
++      ctx?.drawImage(img, 0, 0);
++      resolve(canvas.toDataURL("image/png"));
++    };
++    img.onerror = reject;
++    img.src = src;
++  });
++
++interface Product {
++  code: string;
++  name: string;
++  category: string;
++  amountPerPackage: string;
++  price: number;
++  imageUrl: string;
++  stock: number;
++}
++
++interface CartItem extends Product {
++  quantity: number;
++}
++
++// Brand colors for the PDF
++const GOLD: [number, number, number] = [201, 162, 39];
++const DARK: [number, number, number] = [26, 29, 33];
++
++export function SalesPanel() {
++  const { accessToken, user } = useAuth();
++  const [products, setProducts] = useState<Product[]>([]);
++  const [cart, setCart] = useState<CartItem[]>([]);
++  const [loading, setLoading] = useState(true);
++  const [cartOpen, setCartOpen] = useState(false);
++  const [discount, setDiscount] = useState(0);
++  const [tax, setTax] = useState(0);
++  const [searchTerm, setSearchTerm] = useState("");
++  const [clients, setClients] = useState<Client[]>([]);
++  const [selectedClientId, setSelectedClientId] = useState<string>("");
++  const [clientDialogOpen, setClientDialogOpen] = useState(false);
++
++  useEffect(() => {
++    loadProducts();
++    loadClients();
++  }, []);
++
++  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
++
++  const loadClients = async () => {
++    try {
++      const data = await apiFetch("/clients", { accessToken });
++      setClients(data.clients || []);
++    } catch (error: any) {
++      toast.error(error.message || "Error al cargar clientes", { id: "clients" });
++    }
++  };
++
++  const loadProducts = async () => {
++    try {
++      const data = await apiFetch("/products", { accessToken });
++      setProducts(data.products || []);
++    } catch (error: any) {
++      toast.error(error.message || "Error al cargar productos", { id: "products" });
++    } finally {
++      setLoading(false);
++    }
++  };
++
++  const handleClientSaved = (client: Client) => {
++    loadClients();
++    setSelectedClientId(client.id);
++  };
++
++  const handleShare = async (product: Product) => {
++    try {
++      const result = await shareProduct(product);
++      if (result === "copied") {
++        toast.success("Datos del producto copiados al portapapeles", { id: "share" });
++      }
++    } catch (error: any) {
++      if (error?.name !== "AbortError") {
++        toast.error("No se pudo compartir el producto", { id: "share" });
++      }
++    }
++  };
++
++  const selectedClient = clients.find((c) => c.id === selectedClientId) || null;
++
++  const addToCart = (product: Product) => {
++    setCart((prev) => {
++      const existing = prev.find((item) => item.code === product.code);
++      if (existing) {
++        return prev.map((item) =>
++          item.code === product.code
++            ? { ...item, quantity: item.quantity + 1 }
++            : item,
++        );
++      }
++      return [...prev, { ...product, quantity: 1 }];
++    });
++    // Reuse a single toast id so rapid adds update one notification.
++    toast.success(`${product.name} agregado al carrito`, { id: "cart-add" });
++  };
++
++  const updateQuantity = (code: string, delta: number) => {
++    setCart((prev) =>
++      prev
++        .map((item) =>
++          item.code === code
++            ? { ...item, quantity: Math.max(0, item.quantity + delta) }
++            : item,
++        )
++        .filter((item) => item.quantity > 0),
++    );
++  };
++
++  const removeFromCart = (code: string) => {
++    setCart((prev) => prev.filter((item) => item.code !== code));
++  };
++
++  const calculateSubtotal = () =>
++    cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
++
++  const calculateTotal = () => {
++    const subtotal = calculateSubtotal();
++    const discountAmount = (subtotal * discount) / 100;
++    const taxAmount = ((subtotal - discountAmount) * tax) / 100;
++    return subtotal - discountAmount + taxAmount;
++  };
++
++  const exportToPDF = async () => {
++    if (!selectedClient) {
++      toast.error("Selecciona un cliente para generar el presupuesto", { id: "export" });
++      return;
++    }
++
++    const doc = new jsPDF();
++    const pageW = doc.internal.pageSize.getWidth();
++    const pageH = doc.internal.pageSize.getHeight();
++    const money = (n: number) => `$${n.toFixed(2)}`;
++
++    // ---- Header band ----
++    doc.setFillColor(...DARK);
++    doc.rect(0, 0, pageW, 32, "F");
++    doc.setFillColor(...GOLD);
++    doc.rect(0, 32, pageW, 1.6, "F");
++
++    try {
++      const logoDataUrl = await loadImageAsDataUrl(logoImage);
++      doc.addImage(logoDataUrl, "PNG", 14, 6, 20, 20);
++    } catch {
++      // Continue without the logo if it can't be loaded.
++    }
++
++    doc.setTextColor(255, 255, 255);
++    doc.setFont("helvetica", "bold");
++    doc.setFontSize(15);
++    doc.text("FERRE ALIANZA IMPORT, C.A.", 40, 14);
++    doc.setFont("helvetica", "normal");
++    doc.setFontSize(9);
++    doc.setTextColor(...GOLD);
++    doc.text("PRESUPUESTO / COTIZACIÓN", 40, 21);
++    doc.setTextColor(200, 200, 200);
++    doc.setFontSize(8);
++    doc.text("RIF: J-50137897-5", 40, 27);
++
++    // Document number + date (right aligned in the band)
++    const docNumber = `N° ${new Date().getTime().toString().slice(-6)}`;
++    doc.setTextColor(255, 255, 255);
++    doc.setFontSize(9);
++    doc.text(docNumber, pageW - 14, 14, { align: "right" });
++    doc.setTextColor(200, 200, 200);
++    doc.setFontSize(8);
++    doc.text(
++      `Fecha: ${new Date().toLocaleDateString("es-ES")}`,
++      pageW - 14,
++      21,
++      { align: "right" },
++    );
++
++    // ---- Client / vendor info box ----
++    let y = 44;
++    doc.setDrawColor(225, 225, 225);
++    doc.setFillColor(248, 248, 246);
++    doc.roundedRect(14, y, pageW - 28, 30, 2, 2, "FD");
++
++    doc.setTextColor(...DARK);
++    doc.setFont("helvetica", "bold");
++    doc.setFontSize(9);
++    doc.text("CLIENTE", 20, y + 7);
++    doc.text("VENDEDOR", pageW / 2 + 6, y + 7);
++
++    doc.setFont("helvetica", "normal");
++    doc.setFontSize(9);
++    doc.setTextColor(60, 60, 60);
++    doc.text(selectedClient.name, 20, y + 14);
++    doc.text(`RIF: ${selectedClient.rif}`, 20, y + 20);
++    const address = doc.splitTextToSize(
++      `Dirección: ${selectedClient.address}`,
++      pageW / 2 - 26,
++    );
++    doc.text(address[0] || "", 20, y + 26);
++
++    doc.text(user?.user_metadata?.name || "—", pageW / 2 + 6, y + 14);
++    doc.text(
++      `Fecha: ${new Date().toLocaleDateString("es-ES")}`,
++      pageW / 2 + 6,
++      y + 20,
++    );
++
++    // ---- Items table ----
++    const tableData = cart.map((item) => [
++      item.code,
++      item.name,
++      item.amountPerPackage || "-",
++      String(item.quantity),
++      money(item.price),
++      money(item.price * item.quantity),
++    ]);
++
++    autoTable(doc, {
++      startY: y + 38,
++      head: [["Código", "Producto", "Cant/Paq", "Cant", "Precio", "Total"]],
++      body: tableData,
++      theme: "grid",
++      styles: { fontSize: 8, cellPadding: 2.5, lineColor: [230, 230, 230] },
++      headStyles: {
++        fillColor: DARK,
++        textColor: GOLD,
++        fontStyle: "bold",
++        halign: "left",
++      },
++      alternateRowStyles: { fillColor: [250, 249, 246] },
++      columnStyles: {
++        3: { halign: "center" },
++        4: { halign: "right" },
++        5: { halign: "right" },
++      },
++      margin: { left: 14, right: 14 },
++    });
++
++    // ---- Totals box ----
++    const subtotal = calculateSubtotal();
++    const discountAmount = (subtotal * discount) / 100;
++    const taxAmount = ((subtotal - discountAmount) * tax) / 100;
++    const total = calculateTotal();
++
++    let ty = (doc as any).lastAutoTable.finalY + 8;
++    const boxX = pageW - 94;
++    const boxW = 80;
++
++    const row = (label: string, value: string, bold = false) => {
++      doc.setFont("helvetica", bold ? "bold" : "normal");
++      doc.text(label, boxX, ty);
++      doc.text(value, boxX + boxW, ty, { align: "right" });
++      ty += 6;
++    };
++
++    doc.setTextColor(60, 60, 60);
++    doc.setFontSize(9);
++    row("Subtotal:", money(subtotal));
++    row(`Descuento (${discount}%):`, `-${money(discountAmount)}`);
++    row(`Impuesto (${tax}%):`, `+${money(taxAmount)}`);
++
++    // Total highlighted
++    ty += 1;
++    doc.setFillColor(...DARK);
++    doc.roundedRect(boxX - 4, ty - 5, boxW + 8, 10, 1.5, 1.5, "F");
++    doc.setTextColor(...GOLD);
++    doc.setFont("helvetica", "bold");
++    doc.setFontSize(11);
++    doc.text("TOTAL:", boxX, ty + 1.5);
++    doc.text(money(total), boxX + boxW, ty + 1.5, { align: "right" });
++
++    // ---- Footer ----
++    doc.setFont("helvetica", "italic");
++    doc.setFontSize(8);
++    doc.setTextColor(150, 150, 150);
++    doc.text(
++      "Gracias por su preferencia · Ferre Alianza Import, C.A.",
++      pageW / 2,
++      pageH - 10,
++      { align: "center" },
++    );
++
++    doc.save(`presupuesto-${selectedClient.name.replace(/\s+/g, "-")}-${Date.now()}.pdf`);
++    toast.success("PDF generado exitosamente", { id: "export" });
++  };
++
++  const exportToExcel = () => {
++    const data = cart.map((item) => ({
++      Código: item.code,
++      Producto: item.name,
++      Categoría: item.category,
++      "Cantidad por Paquete": item.amountPerPackage,
++      Cantidad: item.quantity,
++      Precio: item.price,
++      Total: item.price * item.quantity,
++    }));
++
++    const subtotal = calculateSubtotal();
++    const discountAmount = (subtotal * discount) / 100;
++    const taxAmount = ((subtotal - discountAmount) * tax) / 100;
++    const total = calculateTotal();
++
++    const pad = (precio: any, totalVal: any) =>
++      ({
++        Código: "",
++        Producto: "",
++        Categoría: "",
++        "Cantidad por Paquete": "",
++        Cantidad: "",
++        Precio: precio,
++        Total: totalVal,
++      }) as any;
++
++    data.push({} as any);
++    data.push(pad("Subtotal:", subtotal));
++    data.push(pad(`Descuento (${discount}%):`, -discountAmount));
++    data.push(pad(`Impuesto (${tax}%):`, taxAmount));
++    data.push(pad("TOTAL:", total));
++
++    const ws = XLSX.utils.json_to_sheet(data);
++    const wb = XLSX.utils.book_new();
++    XLSX.utils.book_append_sheet(wb, ws, "Presupuesto");
++    XLSX.writeFile(wb, `presupuesto-${Date.now()}.xlsx`);
++    toast.success("Excel generado exitosamente", { id: "export" });
++  };
++
++  const exportToText = () => {
++    let text = "FERRE ALIANZA IMPORT, C.A.\n";
++    text += "PRESUPUESTO\n";
++    text += `Fecha: ${new Date().toLocaleDateString("es-ES")}\n`;
++    text += `Vendedor: ${user?.user_metadata?.name || "—"}\n`;
++    if (selectedClient) {
++      text += `Cliente: ${selectedClient.name} (RIF: ${selectedClient.rif})\n`;
++    }
++    text += "\n" + "-".repeat(80) + "\n";
++    text +=
++      "CÓDIGO".padEnd(12) +
++      "PRODUCTO".padEnd(28) +
++      "CANT".padEnd(8) +
++      "PRECIO".padEnd(12) +
++      "TOTAL\n";
++    text += "-".repeat(80) + "\n";
++
++    cart.forEach((item) => {
++      text +=
++        item.code.padEnd(12) +
++        item.name.substring(0, 27).padEnd(28) +
++        item.quantity.toString().padEnd(8) +
++        `$${item.price.toFixed(2)}`.padEnd(12) +
++        `$${(item.price * item.quantity).toFixed(2)}\n`;
++    });
++
++    const subtotal = calculateSubtotal();
++    const discountAmount = (subtotal * discount) / 100;
++    const taxAmount = ((subtotal - discountAmount) * tax) / 100;
++    const total = calculateTotal();
++
++    text += "-".repeat(80) + "\n";
++    text += `Subtotal: $${subtotal.toFixed(2)}\n`;
++    text += `Descuento (${discount}%): -$${discountAmount.toFixed(2)}\n`;
++    text += `Impuesto (${tax}%): +$${taxAmount.toFixed(2)}\n`;
++    text += `TOTAL: $${total.toFixed(2)}\n`;
++
++    const blob = new Blob([text], { type: "text/plain" });
++    const url = URL.createObjectURL(blob);
++    const a = document.createElement("a");
++    a.href = url;
++    a.download = `presupuesto-${Date.now()}.txt`;
++    a.click();
++    toast.success("Archivo de texto generado exitosamente", { id: "export" });
++  };
++
++  const filteredProducts = products.filter(
++    (product) =>
++      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
++      product.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
++      product.category.toLowerCase().includes(searchTerm.toLowerCase()),
++  );
++
++  if (loading) {
++    return (
++      <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-500">
++        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
++        <p>Cargando catálogo...</p>
++      </div>
++    );
++  }
++
++  return (
++    <div>
++      <div className="flex flex-col sm:flex-row gap-3 mb-6 sm:items-center sm:justify-between">
++        <div className="relative w-full sm:max-w-md">
++          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
++          <Input
++            type="search"
++            placeholder="Buscar por nombre, código o categoría..."
++            value={searchTerm}
++            onChange={(e) => setSearchTerm(e.target.value)}
++            className="pl-9"
++          />
++        </div>
++
++        <Dialog open={cartOpen} onOpenChange={setCartOpen}>
++          <DialogTrigger asChild>
++            <Button className="relative w-full sm:w-auto">
++              <ShoppingCart className="w-4 h-4 mr-2" />
++              Ver carrito
++              {totalItems > 0 && (
++                <span className="ml-2 bg-amber-500 text-slate-900 font-bold rounded-full min-w-[20px] h-5 px-1 flex items-center justify-center text-xs">
++                  {totalItems}
++                </span>
++              )}
++            </Button>
++          </DialogTrigger>
++          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
++            <DialogHeader>
++              <DialogTitle>Carrito · Generar presupuesto</DialogTitle>
++            </DialogHeader>
++
++            <div className="flex items-end gap-2 pb-3 border-b">
++              <div className="flex-1">
++                <Label className="text-sm">Cliente</Label>
++                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
++                  <SelectTrigger>
++                    <SelectValue placeholder="Selecciona un cliente" />
++                  </SelectTrigger>
++                  <SelectContent>
++                    {clients.map((c) => (
++                      <SelectItem key={c.id} value={c.id}>
++                        {c.name} - {c.rif}
++                      </SelectItem>
++                    ))}
++                  </SelectContent>
++                </Select>
++              </div>
++              <ClientFormDialog
++                accessToken={accessToken}
++                open={clientDialogOpen}
++                onOpenChange={setClientDialogOpen}
++                onSaved={handleClientSaved}
++                trigger={
++                  <Button type="button" variant="outline">
++                    <UserPlus className="w-4 h-4 mr-2" />
++                    Cliente
++                  </Button>
++                }
++              />
++            </div>
++
++            {cart.length === 0 ? (
++              <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-3">
++                <ShoppingCart className="w-12 h-12" />
++                <p>El carrito está vacío</p>
++              </div>
++            ) : (
++              <div className="space-y-4">
++                {cart.map((item) => (
++                  <div
++                    key={item.code}
++                    className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100"
++                  >
++                    {item.imageUrl ? (
++                      <img
++                        src={item.imageUrl}
++                        alt={item.name}
++                        className="w-16 h-16 object-cover rounded-lg"
++                      />
++                    ) : (
++                      <div className="w-16 h-16 rounded-lg bg-slate-100 flex items-center justify-center">
++                        <Package className="w-6 h-6 text-slate-300" />
++                      </div>
++                    )}
++                    <div className="flex-1 min-w-0">
++                      <h3 className="font-semibold truncate">{item.name}</h3>
++                      <p className="text-xs text-slate-500">{item.code}</p>
++                      <p className="text-sm font-bold text-amber-600">
++                        ${item.price.toFixed(2)}
++                      </p>
++                    </div>
++                    <div className="flex items-center gap-1">
++                      <Button
++                        size="icon"
++                        variant="outline"
++                        className="h-8 w-8"
++                        onClick={() => updateQuantity(item.code, -1)}
++                      >
++                        <Minus className="w-4 h-4" />
++                      </Button>
++                      <span className="w-10 text-center font-semibold">
++                        {item.quantity}
++                      </span>
++                      <Button
++                        size="icon"
++                        variant="outline"
++                        className="h-8 w-8"
++                        onClick={() => updateQuantity(item.code, 1)}
++                      >
++                        <Plus className="w-4 h-4" />
++                      </Button>
++                    </div>
++                    <div className="text-right min-w-[90px]">
++                      <p className="font-bold">
++                        ${(item.price * item.quantity).toFixed(2)}
++                      </p>
++                      <Button
++                        size="sm"
++                        variant="ghost"
++                        onClick={() => removeFromCart(item.code)}
++                        className="text-red-500 hover:text-red-700 h-7 px-2"
++                      >
++                        <Trash2 className="w-4 h-4" />
++                      </Button>
++                    </div>
++                  </div>
++                ))}
++
++                <div className="border-t pt-4 space-y-3">
++                  <div className="flex gap-4">
++                    <div className="flex-1 space-y-1">
++                      <Label className="text-sm">Descuento (%)</Label>
++                      <Input
++                        type="number"
++                        value={discount}
++                        onChange={(e) => setDiscount(Number(e.target.value))}
++                        min="0"
++                        max="100"
++                      />
++                    </div>
++                    <div className="flex-1 space-y-1">
++                      <Label className="text-sm">Impuesto (%)</Label>
++                      <Input
++                        type="number"
++                        value={tax}
++                        onChange={(e) => setTax(Number(e.target.value))}
++                        min="0"
++                        max="100"
++                      />
++                    </div>
++                  </div>
++
++                  <div className="space-y-1 text-right bg-slate-50 rounded-xl p-4 border border-slate-100">
++                    <p className="text-sm text-slate-600">
++                      Subtotal: ${calculateSubtotal().toFixed(2)}
++                    </p>
++                    <p className="text-sm text-slate-600">
++                      Descuento ({discount}%): -$
++                      {((calculateSubtotal() * discount) / 100).toFixed(2)}
++                    </p>
++                    <p className="text-sm text-slate-600">
++                      Impuesto ({tax}%): +$
++                      {(
++                        ((calculateSubtotal() -
++                          (calculateSubtotal() * discount) / 100) *
++                          tax) /
++                        100
++                      ).toFixed(2)}
++                    </p>
++                    <p className="text-2xl font-bold text-slate-900 pt-1">
++                      Total: ${calculateTotal().toFixed(2)}
++                    </p>
++                  </div>
++
++                  <div className="flex gap-2 pt-1">
++                    <Button onClick={exportToPDF} className="flex-1">
++                      <FileText className="w-4 h-4 mr-2" />
++                      PDF
++                    </Button>
++                    <Button onClick={exportToExcel} className="flex-1" variant="outline">
++                      <Download className="w-4 h-4 mr-2" />
++                      Excel
++                    </Button>
++                    <Button onClick={exportToText} className="flex-1" variant="outline">
++                      <FileText className="w-4 h-4 mr-2" />
++                      Texto
++                    </Button>
++                  </div>
++                </div>
++              </div>
++            )}
++          </DialogContent>
++        </Dialog>
++      </div>
++
++      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
++        {filteredProducts.map((product) => (
++          <Card
++            key={product.code}
++            className="group overflow-hidden border-slate-200 hover:border-amber-300 hover:shadow-lg transition-all p-0 gap-0"
++          >
++            <div className="relative h-44 bg-slate-100 overflow-hidden">
++              {product.imageUrl ? (
++                <img
++                  src={product.imageUrl}
++                  alt={product.name}
++                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
++                />
++              ) : (
++                <div className="w-full h-full flex items-center justify-center">
++                  <Package className="w-12 h-12 text-slate-300" />
++                </div>
++              )}
++              <span className="absolute top-2 left-2 bg-slate-900/80 text-white text-xs px-2 py-0.5 rounded-full backdrop-blur">
++                {product.code}
++              </span>
++              <button
++                type="button"
++                onClick={() => handleShare(product)}
++                title="Compartir producto"
++                className="absolute top-2 right-2 h-8 w-8 flex items-center justify-center rounded-full bg-white/90 text-slate-700 shadow hover:bg-white hover:text-amber-600 transition-colors"
++              >
++                <Share2 className="w-4 h-4" />
++              </button>
++            </div>
++            <CardContent className="p-4">
++              <div className="space-y-2">
++                <span className="inline-block text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
++                  {product.category}
++                </span>
++                <h3 className="font-semibold text-base leading-snug line-clamp-2 min-h-[2.5rem]">
++                  {product.name}
++                </h3>
++                {product.amountPerPackage && (
++                  <p className="text-xs text-slate-500">
++                    Paquete: {product.amountPerPackage}
++                  </p>
++                )}
++                <p className="text-2xl font-bold text-amber-600">
++                  ${product.price.toFixed(2)}
++                </p>
++                <div className="flex gap-2">
++                  <Button onClick={() => addToCart(product)} className="flex-1">
++                    <ShoppingCart className="w-4 h-4 mr-2" />
++                    Añadir
++                  </Button>
++                  <Button
++                    variant="outline"
++                    size="icon"
++                    onClick={() => handleShare(product)}
++                    title="Compartir"
++                  >
++                    <Share2 className="w-4 h-4" />
++                  </Button>
++                </div>
++              </div>
++            </CardContent>
++          </Card>
++        ))}
++      </div>
++
++      {filteredProducts.length === 0 && (
++        <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
++          <Package className="w-12 h-12" />
++          <p>No se encontraron productos</p>
++        </div>
++      )}
++    </div>
++  );
++}
+diff --git a/src/app/components/UserDashboard.tsx b/src/app/components/UserDashboard.tsx
+index e6fb82d..ea71e6c 100644
+--- a/src/app/components/UserDashboard.tsx
++++ b/src/app/components/UserDashboard.tsx
+@@ -1,390 +1,12 @@
+-import { useState, useEffect } from "react";
+ import { useAuth } from "./AuthContext";
+-import { apiFetch } from "../utils/api";
+ import { Button } from "@/components/ui/button";
+-import { Input } from "@/components/ui/input";
+-import { Card, CardContent } from "@/components/ui/card";
+-import {
+-  Dialog,
+-  DialogContent,
+-  DialogHeader,
+-  DialogTitle,
+-  DialogTrigger,
+-} from "@/components/ui/dialog";
+-import { Label } from "@/components/ui/label";
+-import {
+-  Select,
+-  SelectContent,
+-  SelectItem,
+-  SelectTrigger,
+-  SelectValue,
+-} from "@/components/ui/select";
+-import { toast } from "sonner";
+-import {
+-  ShoppingCart,
+-  LogOut,
+-  FileText,
+-  Download,
+-  Trash2,
+-  Plus,
+-  Minus,
+-  Search,
+-  Loader2,
+-  Package,
+-  UserPlus,
+-} from "lucide-react";
+-import jsPDF from "jspdf";
+-import autoTable from "jspdf-autotable";
+-import * as XLSX from "xlsx";
++import { LogOut } from "lucide-react";
+ import { Logo } from "./Logo";
+-import logoImage from "../../imports/image.png";
+-
+-const loadImageAsDataUrl = (src: string): Promise<string> =>
+-  new Promise((resolve, reject) => {
+-    const img = new Image();
+-    img.crossOrigin = "anonymous";
+-    img.onload = () => {
+-      const canvas = document.createElement("canvas");
+-      canvas.width = img.width;
+-      canvas.height = img.height;
+-      const ctx = canvas.getContext("2d");
+-      ctx?.drawImage(img, 0, 0);
+-      resolve(canvas.toDataURL("image/png"));
+-    };
+-    img.onerror = reject;
+-    img.src = src;
+-  });
+-
+-interface Product {
+-  code: string;
+-  name: string;
+-  category: string;
+-  amountPerPackage: string;
+-  price: number;
+-  imageUrl: string;
+-  stock: number;
+-}
+-
+-interface CartItem extends Product {
+-  quantity: number;
+-}
+-
+-interface Client {
+-  id: string;
+-  name: string;
+-  rif: string;
+-  address: string;
+-  vendorId: string;
+-  vendorName: string;
+-}
++import { ProfileButton } from "./ProfileButton";
++import { SalesPanel } from "./SalesPanel";
+ 
+ export function UserDashboard() {
+-  const { accessToken, signOut, user } = useAuth();
+-  const [products, setProducts] = useState<Product[]>([]);
+-  const [cart, setCart] = useState<CartItem[]>([]);
+-  const [loading, setLoading] = useState(true);
+-  const [cartOpen, setCartOpen] = useState(false);
+-  const [discount, setDiscount] = useState(0);
+-  const [tax, setTax] = useState(0);
+-  const [searchTerm, setSearchTerm] = useState("");
+-  const [clients, setClients] = useState<Client[]>([]);
+-  const [selectedClientId, setSelectedClientId] = useState<string>("");
+-  const [clientDialogOpen, setClientDialogOpen] = useState(false);
+-  const [savingClient, setSavingClient] = useState(false);
+-  const [clientForm, setClientForm] = useState({ name: "", rif: "", address: "" });
+-
+-  useEffect(() => {
+-    loadProducts();
+-    loadClients();
+-  }, []);
+-
+-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+-
+-  const loadClients = async () => {
+-    try {
+-      const data = await apiFetch("/clients", { accessToken });
+-      setClients(data.clients || []);
+-    } catch (error: any) {
+-      toast.error(error.message || "Error al cargar clientes", { id: "clients" });
+-    }
+-  };
+-
+-  const handleCreateClient = async (e: React.FormEvent) => {
+-    e.preventDefault();
+-    setSavingClient(true);
+-    try {
+-      const data = await apiFetch("/clients", {
+-        method: "POST",
+-        accessToken,
+-        body: JSON.stringify(clientForm),
+-      });
+-
+-      toast.success("Cliente registrado exitosamente", { id: "client-save" });
+-      setClientForm({ name: "", rif: "", address: "" });
+-      setClientDialogOpen(false);
+-      await loadClients();
+-      setSelectedClientId(data.client.id);
+-    } catch (error: any) {
+-      toast.error(error.message || "Error al registrar cliente", { id: "client-save" });
+-    } finally {
+-      setSavingClient(false);
+-    }
+-  };
+-
+-  const selectedClient = clients.find((c) => c.id === selectedClientId) || null;
+-
+-  const loadProducts = async () => {
+-    try {
+-      const data = await apiFetch("/products", { accessToken });
+-      setProducts(data.products || []);
+-    } catch (error: any) {
+-      toast.error(error.message || "Error al cargar productos", { id: "products" });
+-    } finally {
+-      setLoading(false);
+-    }
+-  };
+-
+-  const addToCart = (product: Product) => {
+-    setCart((prev) => {
+-      const existing = prev.find((item) => item.code === product.code);
+-      if (existing) {
+-        return prev.map((item) =>
+-          item.code === product.code
+-            ? { ...item, quantity: item.quantity + 1 }
+-            : item,
+-        );
+-      }
+-      return [...prev, { ...product, quantity: 1 }];
+-    });
+-    // Reuse a single toast id so rapid adds update one notification
+-    // instead of stacking many.
+-    toast.success(`${product.name} agregado al carrito`, { id: "cart-add" });
+-  };
+-
+-  const updateQuantity = (code: string, delta: number) => {
+-    setCart((prev) =>
+-      prev
+-        .map((item) =>
+-          item.code === code
+-            ? { ...item, quantity: Math.max(0, item.quantity + delta) }
+-            : item,
+-        )
+-        .filter((item) => item.quantity > 0),
+-    );
+-  };
+-
+-  const removeFromCart = (code: string) => {
+-    setCart((prev) => prev.filter((item) => item.code !== code));
+-  };
+-
+-  const calculateSubtotal = () => {
+-    return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+-  };
+-
+-  const calculateTotal = () => {
+-    const subtotal = calculateSubtotal();
+-    const discountAmount = (subtotal * discount) / 100;
+-    const taxAmount = ((subtotal - discountAmount) * tax) / 100;
+-    return subtotal - discountAmount + taxAmount;
+-  };
+-
+-  const exportToPDF = async () => {
+-    if (!selectedClient) {
+-      toast.error("Selecciona un cliente para generar el presupuesto", {
+-        id: "export",
+-      });
+-      return;
+-    }
+-
+-    const doc = new jsPDF();
+-
+-    try {
+-      const logoDataUrl = await loadImageAsDataUrl(logoImage);
+-      doc.addImage(logoDataUrl, "PNG", 14, 10, 24, 24);
+-    } catch (error) {
+-      // If the logo can't be loaded, continue generating the PDF without it
+-    }
+-
+-    doc.setFontSize(18);
+-    doc.text("FERRE ALIANZA IMPORT, C.A.", 105, 20, { align: "center" });
+-    doc.setFontSize(12);
+-    doc.text("Presupuesto", 105, 30, { align: "center" });
+-    doc.setFontSize(10);
+-    doc.text(`Fecha: ${new Date().toLocaleDateString("es-ES")}`, 14, 42);
+-    doc.text(`Vendedor: ${user?.user_metadata?.name}`, 14, 48);
+-    doc.text(`Cliente: ${selectedClient.name}`, 14, 56);
+-    doc.text(`RIF: ${selectedClient.rif}`, 14, 62);
+-    doc.text(`Dirección: ${selectedClient.address}`, 14, 68);
+-
+-    const tableData = cart.map((item) => [
+-      item.code,
+-      item.name,
+-      item.category,
+-      item.amountPerPackage,
+-      item.quantity,
+-      `$${item.price.toFixed(2)}`,
+-      `$${(item.price * item.quantity).toFixed(2)}`,
+-    ]);
+-
+-    autoTable(doc, {
+-      startY: 75,
+-      head: [
+-        [
+-          "Código",
+-          "Producto",
+-          "Categoría",
+-          "Cant/Paq",
+-          "Cant",
+-          "Precio",
+-          "Total",
+-        ],
+-      ],
+-      body: tableData,
+-      theme: "striped",
+-      headStyles: { fillColor: [214, 158, 46] },
+-    });
+-
+-    const finalY = (doc as any).lastAutoTable.finalY + 10;
+-    const subtotal = calculateSubtotal();
+-    const discountAmount = (subtotal * discount) / 100;
+-    const taxAmount = ((subtotal - discountAmount) * tax) / 100;
+-    const total = calculateTotal();
+-
+-    doc.text(`Subtotal: $${subtotal.toFixed(2)}`, 14, finalY);
+-    doc.text(
+-      `Descuento (${discount}%): -$${discountAmount.toFixed(2)}`,
+-      14,
+-      finalY + 6,
+-    );
+-    doc.text(`Impuesto (${tax}%): +$${taxAmount.toFixed(2)}`, 14, finalY + 12);
+-    doc.setFontSize(12);
+-    doc.text(`TOTAL: $${total.toFixed(2)}`, 14, finalY + 22);
+-
+-    doc.save(`orden-${Date.now()}.pdf`);
+-    toast.success("PDF generado exitosamente", { id: "export" });
+-  };
+-
+-  const exportToExcel = () => {
+-    const data = cart.map((item) => ({
+-      Código: item.code,
+-      Producto: item.name,
+-      Categoría: item.category,
+-      "Cantidad por Paquete": item.amountPerPackage,
+-      Cantidad: item.quantity,
+-      Precio: item.price,
+-      Total: item.price * item.quantity,
+-    }));
+-
+-    const subtotal = calculateSubtotal();
+-    const discountAmount = (subtotal * discount) / 100;
+-    const taxAmount = ((subtotal - discountAmount) * tax) / 100;
+-    const total = calculateTotal();
+-
+-    data.push({} as any);
+-    data.push({
+-      Código: "",
+-      Producto: "",
+-      Categoría: "",
+-      "Cantidad por Paquete": "",
+-      Cantidad: "",
+-      Precio: "Subtotal:",
+-      Total: subtotal,
+-    } as any);
+-    data.push({
+-      Código: "",
+-      Producto: "",
+-      Categoría: "",
+-      "Cantidad por Paquete": "",
+-      Cantidad: "",
+-      Precio: `Descuento (${discount}%):`,
+-      Total: -discountAmount,
+-    } as any);
+-    data.push({
+-      Código: "",
+-      Producto: "",
+-      Categoría: "",
+-      "Cantidad por Paquete": "",
+-      Cantidad: "",
+-      Precio: `Impuesto (${tax}%):`,
+-      Total: taxAmount,
+-    } as any);
+-    data.push({
+-      Código: "",
+-      Producto: "",
+-      Categoría: "",
+-      "Cantidad por Paquete": "",
+-      Cantidad: "",
+-      Precio: "TOTAL:",
+-      Total: total,
+-    } as any);
+-
+-    const ws = XLSX.utils.json_to_sheet(data);
+-    const wb = XLSX.utils.book_new();
+-    XLSX.utils.book_append_sheet(wb, ws, "Orden");
+-    XLSX.writeFile(wb, `orden-${Date.now()}.xlsx`);
+-    toast.success("Excel generado exitosamente", { id: "export" });
+-  };
+-
+-  const exportToText = () => {
+-    let text = "FERRE ALIANZA IMPORT, C.A.\n";
+-    text += "ORDEN DE PEDIDO\n";
+-    text += `Fecha: ${new Date().toLocaleDateString("es-ES")}\n`;
+-    text += `Cliente: ${user?.user_metadata?.name}\n\n`;
+-    text += "-".repeat(80) + "\n";
+-    text +=
+-      "CÓDIGO".padEnd(12) +
+-      "PRODUCTO".padEnd(25) +
+-      "CATEGORÍA".padEnd(15) +
+-      "CANT".padEnd(8) +
+-      "PRECIO".padEnd(10) +
+-      "TOTAL\n";
+-    text += "-".repeat(80) + "\n";
+-
+-    cart.forEach((item) => {
+-      text +=
+-        item.code.padEnd(12) +
+-        item.name.substring(0, 24).padEnd(25) +
+-        item.category.substring(0, 14).padEnd(15) +
+-        item.quantity.toString().padEnd(8) +
+-        `$${item.price.toFixed(2)}`.padEnd(10) +
+-        `$${(item.price * item.quantity).toFixed(2)}\n`;
+-    });
+-
+-    const subtotal = calculateSubtotal();
+-    const discountAmount = (subtotal * discount) / 100;
+-    const taxAmount = ((subtotal - discountAmount) * tax) / 100;
+-    const total = calculateTotal();
+-
+-    text += "-".repeat(80) + "\n";
+-    text += `Subtotal: $${subtotal.toFixed(2)}\n`;
+-    text += `Descuento (${discount}%): -$${discountAmount.toFixed(2)}\n`;
+-    text += `Impuesto (${tax}%): +$${taxAmount.toFixed(2)}\n`;
+-    text += `TOTAL: $${total.toFixed(2)}\n`;
+-
+-    const blob = new Blob([text], { type: "text/plain" });
+-    const url = URL.createObjectURL(blob);
+-    const a = document.createElement("a");
+-    a.href = url;
+-    a.download = `orden-${Date.now()}.txt`;
+-    a.click();
+-    toast.success("Archivo de texto generado exitosamente", { id: "export" });
+-  };
+-
+-  const filteredProducts = products.filter(
+-    (product) =>
+-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+-      product.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+-      product.category.toLowerCase().includes(searchTerm.toLowerCase()),
+-  );
+-
+-  if (loading) {
+-    return (
+-      <div className="flex flex-col items-center justify-center h-screen gap-3 text-slate-500">
+-        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+-        <p>Cargando catálogo...</p>
+-      </div>
+-    );
+-  }
++  const { signOut } = useAuth();
+ 
+   return (
+     <div className="min-h-screen bg-slate-50">
+@@ -402,231 +24,7 @@ export function UserDashboard() {
+             </div>
+           </div>
+           <div className="flex items-center gap-3">
+-            <Dialog open={cartOpen} onOpenChange={setCartOpen}>
+-              <DialogTrigger asChild>
+-                <Button
+-                  variant="outline"
+-                  className="relative bg-slate-800 border-slate-700 text-white hover:bg-slate-700 hover:text-white"
+-                >
+-                  <ShoppingCart className="w-5 h-5" />
+-                  {totalItems > 0 && (
+-                    <span className="absolute -top-2 -right-2 bg-amber-500 text-slate-900 font-bold rounded-full min-w-[20px] h-5 px-1 flex items-center justify-center text-xs">
+-                      {totalItems}
+-                    </span>
+-                  )}
+-                </Button>
+-              </DialogTrigger>
+-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+-                <DialogHeader>
+-                  <DialogTitle>Carrito de Compras</DialogTitle>
+-                </DialogHeader>
+-
+-                <div className="flex items-end gap-2 pb-3 border-b">
+-                  <div className="flex-1">
+-                    <Label className="text-sm">Cliente</Label>
+-                    <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+-                      <SelectTrigger>
+-                        <SelectValue placeholder="Selecciona un cliente" />
+-                      </SelectTrigger>
+-                      <SelectContent>
+-                        {clients.map((c) => (
+-                          <SelectItem key={c.id} value={c.id}>
+-                            {c.name} - {c.rif}
+-                          </SelectItem>
+-                        ))}
+-                      </SelectContent>
+-                    </Select>
+-                  </div>
+-                  <Dialog open={clientDialogOpen} onOpenChange={setClientDialogOpen}>
+-                    <DialogTrigger asChild>
+-                      <Button type="button" variant="outline">
+-                        <UserPlus className="w-4 h-4 mr-2" />
+-                        Cliente
+-                      </Button>
+-                    </DialogTrigger>
+-                    <DialogContent className="max-w-md">
+-                      <DialogHeader>
+-                        <DialogTitle>Nuevo Cliente</DialogTitle>
+-                      </DialogHeader>
+-                      <form onSubmit={handleCreateClient} className="space-y-4">
+-                        <div className="space-y-2">
+-                          <Label>Nombre</Label>
+-                          <Input
+-                            value={clientForm.name}
+-                            onChange={(e) => setClientForm({ ...clientForm, name: e.target.value })}
+-                            required
+-                          />
+-                        </div>
+-                        <div className="space-y-2">
+-                          <Label>RIF</Label>
+-                          <Input
+-                            value={clientForm.rif}
+-                            onChange={(e) => setClientForm({ ...clientForm, rif: e.target.value })}
+-                            required
+-                          />
+-                        </div>
+-                        <div className="space-y-2">
+-                          <Label>Dirección</Label>
+-                          <Input
+-                            value={clientForm.address}
+-                            onChange={(e) => setClientForm({ ...clientForm, address: e.target.value })}
+-                            required
+-                          />
+-                        </div>
+-                        <Button type="submit" className="w-full" disabled={savingClient}>
+-                          {savingClient && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+-                          {savingClient ? "Guardando..." : "Registrar Cliente"}
+-                        </Button>
+-                      </form>
+-                    </DialogContent>
+-                  </Dialog>
+-                </div>
+-
+-                {cart.length === 0 ? (
+-                  <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-3">
+-                    <ShoppingCart className="w-12 h-12" />
+-                    <p>El carrito está vacío</p>
+-                  </div>
+-                ) : (
+-                  <div className="space-y-4">
+-                    {cart.map((item) => (
+-                      <div
+-                        key={item.code}
+-                        className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100"
+-                      >
+-                        {item.imageUrl ? (
+-                          <img
+-                            src={item.imageUrl}
+-                            alt={item.name}
+-                            className="w-16 h-16 object-cover rounded-lg"
+-                          />
+-                        ) : (
+-                          <div className="w-16 h-16 rounded-lg bg-slate-100 flex items-center justify-center">
+-                            <Package className="w-6 h-6 text-slate-300" />
+-                          </div>
+-                        )}
+-                        <div className="flex-1 min-w-0">
+-                          <h3 className="font-semibold truncate">{item.name}</h3>
+-                          <p className="text-xs text-slate-500">{item.code}</p>
+-                          <p className="text-sm font-bold text-amber-600">
+-                            ${item.price.toFixed(2)}
+-                          </p>
+-                        </div>
+-                        <div className="flex items-center gap-1">
+-                          <Button
+-                            size="icon"
+-                            variant="outline"
+-                            className="h-8 w-8"
+-                            onClick={() => updateQuantity(item.code, -1)}
+-                          >
+-                            <Minus className="w-4 h-4" />
+-                          </Button>
+-                          <span className="w-10 text-center font-semibold">
+-                            {item.quantity}
+-                          </span>
+-                          <Button
+-                            size="icon"
+-                            variant="outline"
+-                            className="h-8 w-8"
+-                            onClick={() => updateQuantity(item.code, 1)}
+-                          >
+-                            <Plus className="w-4 h-4" />
+-                          </Button>
+-                        </div>
+-                        <div className="text-right min-w-[90px]">
+-                          <p className="font-bold">
+-                            ${(item.price * item.quantity).toFixed(2)}
+-                          </p>
+-                          <Button
+-                            size="sm"
+-                            variant="ghost"
+-                            onClick={() => removeFromCart(item.code)}
+-                            className="text-red-500 hover:text-red-700 h-7 px-2"
+-                          >
+-                            <Trash2 className="w-4 h-4" />
+-                          </Button>
+-                        </div>
+-                      </div>
+-                    ))}
+-
+-                    <div className="border-t pt-4 space-y-3">
+-                      <div className="flex gap-4">
+-                        <div className="flex-1 space-y-1">
+-                          <Label className="text-sm">Descuento (%)</Label>
+-                          <Input
+-                            type="number"
+-                            value={discount}
+-                            onChange={(e) =>
+-                              setDiscount(Number(e.target.value))
+-                            }
+-                            min="0"
+-                            max="100"
+-                          />
+-                        </div>
+-                        <div className="flex-1 space-y-1">
+-                          <Label className="text-sm">Impuesto (%)</Label>
+-                          <Input
+-                            type="number"
+-                            value={tax}
+-                            onChange={(e) => setTax(Number(e.target.value))}
+-                            min="0"
+-                            max="100"
+-                          />
+-                        </div>
+-                      </div>
+-
+-                      <div className="space-y-1 text-right bg-slate-50 rounded-xl p-4 border border-slate-100">
+-                        <p className="text-sm text-slate-600">
+-                          Subtotal: ${calculateSubtotal().toFixed(2)}
+-                        </p>
+-                        <p className="text-sm text-slate-600">
+-                          Descuento ({discount}%): -$
+-                          {((calculateSubtotal() * discount) / 100).toFixed(2)}
+-                        </p>
+-                        <p className="text-sm text-slate-600">
+-                          Impuesto ({tax}%): +$
+-                          {(
+-                            ((calculateSubtotal() -
+-                              (calculateSubtotal() * discount) / 100) *
+-                              tax) /
+-                            100
+-                          ).toFixed(2)}
+-                        </p>
+-                        <p className="text-2xl font-bold text-slate-900 pt-1">
+-                          Total: ${calculateTotal().toFixed(2)}
+-                        </p>
+-                      </div>
+-
+-                      <div className="flex gap-2 pt-1">
+-                        <Button onClick={exportToPDF} className="flex-1">
+-                          <FileText className="w-4 h-4 mr-2" />
+-                          PDF
+-                        </Button>
+-                        <Button
+-                          onClick={exportToExcel}
+-                          className="flex-1"
+-                          variant="outline"
+-                        >
+-                          <Download className="w-4 h-4 mr-2" />
+-                          Excel
+-                        </Button>
+-                        <Button
+-                          onClick={exportToText}
+-                          className="flex-1"
+-                          variant="outline"
+-                        >
+-                          <FileText className="w-4 h-4 mr-2" />
+-                          Texto
+-                        </Button>
+-                      </div>
+-                    </div>
+-                  </div>
+-                )}
+-              </DialogContent>
+-            </Dialog>
+-            <span className="hidden sm:inline text-sm text-slate-300">
+-              {user?.user_metadata?.name}
+-            </span>
++            <ProfileButton />
+             <Button
+               variant="outline"
+               size="sm"
+@@ -634,78 +32,14 @@ export function UserDashboard() {
+               className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700 hover:text-white"
+             >
+               <LogOut className="w-4 h-4 mr-2" />
+-              Salir
++              <span className="hidden sm:inline">Salir</span>
+             </Button>
+           </div>
+         </div>
+       </header>
+ 
+       <main className="container mx-auto px-4 py-8">
+-        <div className="mb-6 relative max-w-md">
+-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+-          <Input
+-            type="search"
+-            placeholder="Buscar por nombre, código o categoría..."
+-            value={searchTerm}
+-            onChange={(e) => setSearchTerm(e.target.value)}
+-            className="pl-9"
+-          />
+-        </div>
+-
+-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+-          {filteredProducts.map((product) => (
+-            <Card
+-              key={product.code}
+-              className="group overflow-hidden border-slate-200 hover:border-amber-300 hover:shadow-lg transition-all p-0 gap-0"
+-            >
+-              <div className="relative h-44 bg-slate-100 overflow-hidden">
+-                {product.imageUrl ? (
+-                  <img
+-                    src={product.imageUrl}
+-                    alt={product.name}
+-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+-                  />
+-                ) : (
+-                  <div className="w-full h-full flex items-center justify-center">
+-                    <Package className="w-12 h-12 text-slate-300" />
+-                  </div>
+-                )}
+-                <span className="absolute top-2 left-2 bg-slate-900/80 text-white text-xs px-2 py-0.5 rounded-full backdrop-blur">
+-                  {product.code}
+-                </span>
+-              </div>
+-              <CardContent className="p-4">
+-                <div className="space-y-2">
+-                  <span className="inline-block text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+-                    {product.category}
+-                  </span>
+-                  <h3 className="font-semibold text-base leading-snug line-clamp-2 min-h-[2.5rem]">
+-                    {product.name}
+-                  </h3>
+-                  {product.amountPerPackage && (
+-                    <p className="text-xs text-slate-500">
+-                      Paquete: {product.amountPerPackage}
+-                    </p>
+-                  )}
+-                  <p className="text-2xl font-bold text-amber-600">
+-                    ${product.price.toFixed(2)}
+-                  </p>
+-                  <Button onClick={() => addToCart(product)} className="w-full">
+-                    <ShoppingCart className="w-4 h-4 mr-2" />
+-                    Añadir al Carrito
+-                  </Button>
+-                </div>
+-              </CardContent>
+-            </Card>
+-          ))}
+-        </div>
+-
+-        {filteredProducts.length === 0 && (
+-          <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
+-            <Package className="w-12 h-12" />
+-            <p>No se encontraron productos</p>
+-          </div>
+-        )}
++        <SalesPanel />
+       </main>
+     </div>
+   );
+diff --git a/src/app/utils/share.ts b/src/app/utils/share.ts
+new file mode 100644
+index 0000000..a751c06
+--- /dev/null
++++ b/src/app/utils/share.ts
+@@ -0,0 +1,74 @@
++interface ShareableProduct {
++  code: string;
++  name: string;
++  category?: string;
++  amountPerPackage?: string;
++  price: number;
++  imageUrl?: string;
++}
++
++export type ShareResult = 'shared' | 'copied';
++
++function buildProductText(product: ShareableProduct): string {
++  const lines = [
++    `*${product.name}*`,
++    `Código: ${product.code}`,
++    product.category ? `Categoría: ${product.category}` : '',
++    product.amountPerPackage ? `Paquete: ${product.amountPerPackage}` : '',
++    `Precio: $${Number(product.price).toFixed(2)}`,
++    '',
++    'Ferre Alianza Import, C.A.',
++  ];
++  return lines.filter(Boolean).join('\n');
++}
++
++/**
++ * Shares a product's basic data (and its photo when available) using the
++ * native share sheet on mobile, so the user can send it to WhatsApp and other
++ * apps. Falls back to copying the data to the clipboard on unsupported
++ * browsers (e.g. desktop).
++ *
++ * Throws `AbortError` if the user dismisses the native share sheet; callers
++ * should ignore that case.
++ */
++export async function shareProduct(product: ShareableProduct): Promise<ShareResult> {
++  const text = buildProductText(product);
++  const title = product.name;
++  const nav = navigator as Navigator & {
++    canShare?: (data?: ShareData) => boolean;
++  };
++
++  // 1) Try sharing with the product image attached.
++  if (product.imageUrl && typeof nav.share === 'function' && typeof nav.canShare === 'function') {
++    try {
++      const response = await fetch(product.imageUrl);
++      const blob = await response.blob();
++      const extension = (blob.type.split('/')[1] || 'jpg').split('+')[0];
++      const file = new File([blob], `${product.code || 'producto'}.${extension}`, {
++        type: blob.type || 'image/jpeg',
++      });
++
++      if (nav.canShare({ files: [file] })) {
++        await nav.share({ files: [file], title, text });
++        return 'shared';
++      }
++    } catch (error: any) {
++      // If the user cancelled, surface it so the caller can stay silent.
++      if (error?.name === 'AbortError') throw error;
++      // Otherwise fall through to text-only sharing.
++    }
++  }
++
++  // 2) Text-only native share (image not supported or unavailable).
++  if (typeof nav.share === 'function') {
++    const shareData: ShareData = { title, text };
++    if (product.imageUrl) shareData.url = product.imageUrl;
++    await nav.share(shareData);
++    return 'shared';
++  }
++
++  // 3) Clipboard fallback for desktop browsers without the Share API.
++  const clipboardText = product.imageUrl ? `${text}\n${product.imageUrl}` : text;
++  await navigator.clipboard.writeText(clipboardText);
++  return 'copied';
++}
+-- 
+2.43.0
+

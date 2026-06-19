@@ -6,10 +6,27 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+<<<<<<< ours
 import { Plus, Pencil, Trash2, FileSpreadsheet, LogOut } from 'lucide-react';
+=======
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  FileSpreadsheet,
+  LogOut,
+  Package,
+  Users,
+  Loader2,
+  FileText,
+} from 'lucide-react';
+>>>>>>> theirs
 import * as XLSX from 'xlsx';
 import { projectId } from '/utils/supabase/info';
 import { Logo } from './Logo';
+import { ProfileButton } from './ProfileButton';
+import { SalesPanel } from './SalesPanel';
+import { ClientFormDialog, Client } from './ClientFormDialog';
 
 interface Product {
   code: string;
@@ -21,23 +38,15 @@ interface Product {
   stock: number;
 }
 
-interface Client {
-  id: string;
-  name: string;
-  rif: string;
-  address: string;
-  vendorId: string;
-  vendorName: string;
-  createdAt: string;
-}
-
 export function AdminDashboard() {
-  const { accessToken, signOut, user } = useAuth();
+  const { accessToken, signOut } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [view, setView] = useState<'products' | 'clients'>('products');
+  const [view, setView] = useState<'products' | 'clients' | 'sales'>('products');
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [clientDialogOpen, setClientDialogOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
     code: '',
@@ -71,6 +80,27 @@ export function AdminDashboard() {
       }
     } catch (error) {
       toast.error('Error al cargar clientes');
+    }
+  };
+
+  const openNewClient = () => {
+    setEditingClient(null);
+    setClientDialogOpen(true);
+  };
+
+  const openEditClient = (client: Client) => {
+    setEditingClient(client);
+    setClientDialogOpen(true);
+  };
+
+  const handleDeleteClient = async (client: Client) => {
+    if (!confirm(`¿Eliminar al cliente "${client.name}"?`)) return;
+    try {
+      await apiFetch(`/clients/${client.id}`, { method: 'DELETE', accessToken });
+      toast.success('Cliente eliminado', { id: 'client-del' });
+      loadClients();
+    } catch (error: any) {
+      toast.error(error.message || 'Error al eliminar el cliente', { id: 'client-del' });
     }
   };
 
@@ -276,11 +306,22 @@ export function AdminDashboard() {
             <Logo />
             <h1 className="text-2xl font-bold text-slate-800">Panel de Administración</h1>
           </div>
+<<<<<<< ours
           <div className="flex items-center gap-4">
             <span className="text-sm text-slate-600">{user?.user_metadata?.name}</span>
             <Button variant="outline" size="sm" onClick={signOut}>
+=======
+          <div className="flex items-center gap-3">
+            <ProfileButton />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={signOut}
+              className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700 hover:text-white"
+            >
+>>>>>>> theirs
               <LogOut className="w-4 h-4 mr-2" />
-              Salir
+              <span className="hidden sm:inline">Salir</span>
             </Button>
           </div>
         </div>
@@ -300,10 +341,20 @@ export function AdminDashboard() {
           >
             Clientes
           </button>
+          <button
+            className={`${tabBase} ${view === 'sales' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            onClick={() => setView('sales')}
+          >
+            <FileText className="w-4 h-4" />
+            Presupuestos
+          </button>
         </div>
+
+        {view === 'sales' && <SalesPanel />}
 
         {view === 'clients' && (
           <div className="space-y-4">
+<<<<<<< ours
             <h2 className="text-lg font-semibold text-slate-800">Todos los Clientes Registrados</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm bg-white rounded-lg shadow">
@@ -313,15 +364,60 @@ export function AdminDashboard() {
                     <th className="p-3">RIF</th>
                     <th className="p-3">Dirección</th>
                     <th className="p-3">Vendedor</th>
+=======
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold text-slate-800">Clientes Registrados</h2>
+              <Button onClick={openNewClient}>
+                <Plus className="w-4 h-4 mr-2" />
+                Nuevo Cliente
+              </Button>
+            </div>
+            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left bg-slate-50 text-slate-600">
+                    <th className="p-3 font-semibold">Nombre</th>
+                    <th className="p-3 font-semibold">RIF</th>
+                    <th className="p-3 font-semibold">Dirección</th>
+                    <th className="p-3 font-semibold">Vendedor</th>
+                    <th className="p-3 font-semibold text-right">Acciones</th>
+>>>>>>> theirs
                   </tr>
                 </thead>
                 <tbody>
                   {clients.map((client) => (
+<<<<<<< ours
                     <tr key={client.id} className="border-b border-slate-100">
                       <td className="p-3">{client.name}</td>
                       <td className="p-3">{client.rif}</td>
                       <td className="p-3">{client.address}</td>
                       <td className="p-3">{client.vendorName}</td>
+=======
+                    <tr key={client.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                      <td className="p-3 font-medium">{client.name}</td>
+                      <td className="p-3 text-slate-600">{client.rif}</td>
+                      <td className="p-3 text-slate-600">{client.address}</td>
+                      <td className="p-3 text-slate-600">{client.vendorName}</td>
+                      <td className="p-3">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditClient(client)}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:text-red-700"
+                            onClick={() => handleDeleteClient(client)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+>>>>>>> theirs
                     </tr>
                   ))}
                 </tbody>
@@ -332,6 +428,14 @@ export function AdminDashboard() {
                 </div>
               )}
             </div>
+
+            <ClientFormDialog
+              accessToken={accessToken}
+              open={clientDialogOpen}
+              onOpenChange={setClientDialogOpen}
+              client={editingClient}
+              onSaved={() => loadClients()}
+            />
           </div>
         )}
 

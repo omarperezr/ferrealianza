@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { Button } from "@/components/ui/button";
+<<<<<<< ours
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -32,49 +32,15 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { projectId } from "/utils/supabase/info";
+=======
+import { LogOut } from "lucide-react";
+>>>>>>> theirs
 import { Logo } from "./Logo";
-import logoImage from "../../imports/image.png";
-
-const loadImageAsDataUrl = (src: string): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      ctx?.drawImage(img, 0, 0);
-      resolve(canvas.toDataURL("image/png"));
-    };
-    img.onerror = reject;
-    img.src = src;
-  });
-
-interface Product {
-  code: string;
-  name: string;
-  category: string;
-  amountPerPackage: string;
-  price: number;
-  imageUrl: string;
-  stock: number;
-}
-
-interface CartItem extends Product {
-  quantity: number;
-}
-
-interface Client {
-  id: string;
-  name: string;
-  rif: string;
-  address: string;
-  vendorId: string;
-  vendorName: string;
-}
+import { ProfileButton } from "./ProfileButton";
+import { SalesPanel } from "./SalesPanel";
 
 export function UserDashboard() {
+<<<<<<< ours
   const { accessToken, signOut, user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -392,6 +358,9 @@ export function UserDashboard() {
       </div>
     );
   }
+=======
+  const { signOut } = useAuth();
+>>>>>>> theirs
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -403,6 +372,7 @@ export function UserDashboard() {
               Catálogo de Productos
             </h1>
           </div>
+<<<<<<< ours
           <div className="flex items-center gap-4">
             <Dialog open={cartOpen} onOpenChange={setCartOpen}>
               <DialogTrigger asChild>
@@ -617,14 +587,25 @@ export function UserDashboard() {
               {user?.user_metadata?.name}
             </span>
             <Button variant="outline" size="sm" onClick={signOut}>
+=======
+          <div className="flex items-center gap-3">
+            <ProfileButton />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={signOut}
+              className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700 hover:text-white"
+            >
+>>>>>>> theirs
               <LogOut className="w-4 h-4 mr-2" />
-              Salir
+              <span className="hidden sm:inline">Salir</span>
             </Button>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
+<<<<<<< ours
         <div className="mb-6">
           <Input
             type="search"
@@ -682,6 +663,9 @@ export function UserDashboard() {
             No se encontraron productos
           </div>
         )}
+=======
+        <SalesPanel />
+>>>>>>> theirs
       </main>
     </div>
   );
