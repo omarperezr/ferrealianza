@@ -32,6 +32,12 @@ import { ProfileButton } from './ProfileButton';
 import { SalesPanel } from './SalesPanel';
 import { ClientFormDialog, Client } from './ClientFormDialog';
 
+async function dataUrlToFile(dataUrl: string, filename: string): Promise<File> {
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  return new File([blob], filename, { type: blob.type || 'image/jpeg' });
+}
+
 interface Product {
   code: string;
   name: string;
@@ -219,11 +225,17 @@ export function AdminDashboard() {
       let ok = 0;
       const queue = [...products];
 
-      // Import in parallel batches for speed (instead of one-by-one).
+      // Import in parallel batches for speed (instead of one-by-one). Images
+      // embedded as base64 data URLs are uploaded to Storage first so imported
+      // products end up with the same kind of signed URL as manually created ones.
       const worker = async () => {
         while (queue.length) {
           const productData = queue.shift()!;
           try {
+            if (productData.imageUrl.startsWith('data:')) {
+              const file = await dataUrlToFile(productData.imageUrl, `${productData.code}.jpg`);
+              productData.imageUrl = await handleImageUpload(file);
+            }
             await apiFetch('/products', {
               method: 'POST',
               accessToken,

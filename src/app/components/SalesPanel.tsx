@@ -465,8 +465,8 @@ export function SalesPanel() {
               <DialogTitle>Carrito · Generar presupuesto</DialogTitle>
             </DialogHeader>
 
-            <div className="flex items-end gap-2 pb-3 border-b">
-              <div className="flex-1">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-2 pb-3 border-b">
+              <div className="flex-1 min-w-0">
                 <Label className="text-sm">Cliente</Label>
                 <Select value={selectedClientId} onValueChange={setSelectedClientId}>
                   <SelectTrigger>
@@ -487,9 +487,9 @@ export function SalesPanel() {
                 onOpenChange={setClientDialogOpen}
                 onSaved={handleClientSaved}
                 trigger={
-                  <Button type="button" variant="outline">
+                  <Button type="button" variant="outline" className="w-full sm:w-auto shrink-0">
                     <UserPlus className="w-4 h-4 mr-2" />
-                    Cliente
+                    Nuevo cliente
                   </Button>
                 }
               />
