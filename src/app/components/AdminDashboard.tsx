@@ -105,17 +105,13 @@ export function AdminDashboard() {
     }
   };
 
-  const fileToDataUrl = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
   const handleImageUpload = async (file: File): Promise<string> => {
     const compressed = await compressImage(file);
-    return fileToDataUrl(compressed);
+    const body = new FormData();
+    body.append('file', compressed);
+
+    const data = await apiFetch('/upload-image', { method: 'POST', accessToken, body });
+    return data.imageUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
