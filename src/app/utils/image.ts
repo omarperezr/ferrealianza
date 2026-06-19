@@ -11,12 +11,17 @@ export async function compressImage(
   if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
 
   try {
-    const dataUrl = await readAsDataUrl(file);
-    const img = await loadImage(dataUrl);
+    // createImageBitmap decodes the file fully (and applies EXIF orientation)
+    // before returning, which avoids the "solid black" frame produced when the
+    // canvas is drawn from a not-yet-decoded <img>. We fall back to <img> only
+    // if the browser lacks createImageBitmap.
+    const source = await loadSource(file);
+    if (!source) return file;
 
-    const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
-    const width = Math.round(img.width * scale);
-    const height = Math.round(img.height * scale);
+    const { width: srcW, height: srcH } = source;
+    const scale = Math.min(1, maxSize / Math.max(srcW, srcH));
+    const width = Math.max(1, Math.round(srcW * scale));
+    const height = Math.max(1, Math.round(srcH * scale));
 
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -27,7 +32,8 @@ export async function compressImage(
     // turn black when encoded as JPEG.
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, width, height);
-    ctx.drawImage(img, 0, 0, width, height);
+    ctx.drawImage(source.image as CanvasImageSource, 0, 0, width, height);
+    if ('close' in source.image) (source.image as ImageBitmap).close();
 
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, 'image/jpeg', quality),
@@ -38,6 +44,26 @@ export async function compressImage(
     return new File([blob], newName, { type: 'image/jpeg' });
   } catch {
     return file;
+  }
+}
+
+type DecodedSource = { image: CanvasImageSource; width: number; height: number };
+
+async function loadSource(file: File): Promise<DecodedSource | null> {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(file);
+      return { image: bitmap, width: bitmap.width, height: bitmap.height };
+    } catch {
+      /* fall back to <img> below */
+    }
+  }
+  try {
+    const dataUrl = await readAsDataUrl(file);
+    const img = await loadImage(dataUrl);
+    return { image: img, width: img.naturalWidth, height: img.naturalHeight };
+  } catch {
+    return null;
   }
 }
 
@@ -54,8 +80,6 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = async () => {
-      // Ensure pixels are fully decoded before the caller draws to canvas,
-      // otherwise some browsers paint a blank/black frame.
       try {
         if (img.decode) await img.decode();
       } catch {
