@@ -20,6 +20,9 @@ const getAnonClient = () => createClient(
 // Bucket name for product images
 const BUCKET_NAME = 'make-745f9946-product-images';
 
+// Default client associated to every vendor (existing and new).
+const DEFAULT_CLIENT_ID = 'default-primera-compra';
+
 // Initialize storage bucket
 (async () => {
   const supabase = getServiceClient();
@@ -28,6 +31,29 @@ const BUCKET_NAME = 'make-745f9946-product-images';
   if (!bucketExists) {
     await supabase.storage.createBucket(BUCKET_NAME, { public: false });
     console.log(`Created storage bucket: ${BUCKET_NAME}`);
+  }
+})();
+
+// Seed the default "Primera compra" client (visible to all vendors)
+(async () => {
+  try {
+    const existing = await kv.get(`client:${DEFAULT_CLIENT_ID}`);
+    if (!existing) {
+      await kv.set(`client:${DEFAULT_CLIENT_ID}`, {
+        id: DEFAULT_CLIENT_ID,
+        name: 'Primera compra',
+        rif: 'N/A',
+        address: 'N/A',
+        vendorId: 'system',
+        vendorName: 'Sistema',
+        vendorIds: [],
+        allVendors: true,
+        createdAt: new Date().toISOString(),
+      });
+      console.log('Seeded default client: Primera compra');
+    }
+  } catch (e) {
+    console.log(`Error seeding default client: ${e}`);
   }
 })();
 
@@ -160,11 +186,16 @@ app.post("/make-server-745f9946/auth/signout", authMiddleware, async (c) => {
 
 // ===== PRODUCT ROUTES =====
 
-// Get all products
+// Get all products (vendors don't see hidden products)
 app.get("/make-server-745f9946/products", authMiddleware, async (c) => {
   try {
+    const user = c.get('user');
+    const userRole = user.user_metadata?.role || 'user';
     const products = await kv.getByPrefix('product:');
-    return c.json({ products });
+    const visible = userRole === 'admin'
+      ? products
+      : products.filter((p: any) => !p.hidden);
+    return c.json({ products: visible });
   } catch (error) {
     console.log(`Error al obtener productos: ${error}`);
     return c.json({ error: 'Error al obtener productos' }, 500);
@@ -172,7 +203,7 @@ app.get("/make-server-745f9946/products", authMiddleware, async (c) => {
 });
 
 // Get single product
-app.get("/make-server-745f9946/products/:code", authMiddleware, async (c) => {
+app.get("/make-server-745f9946/products/:code{.+}", authMiddleware, async (c) => {
   try {
     const code = c.req.param('code');
     const product = await kv.get(`product:${code}`);
@@ -192,7 +223,7 @@ app.get("/make-server-745f9946/products/:code", authMiddleware, async (c) => {
 app.post("/make-server-745f9946/products", authMiddleware, adminMiddleware, async (c) => {
   try {
     const product = await c.req.json();
-    const { code, name, category, amountPerPackage, price, imageUrl, stock } = product;
+    const { code, name, category, amountPerPackage, price, imageUrl, stock, hidden } = product;
 
     if (!code || !name || !category || !price) {
       return c.json({ error: 'Código, nombre, categoría y precio son requeridos' }, 400);
@@ -212,6 +243,7 @@ app.post("/make-server-745f9946/products", authMiddleware, adminMiddleware, asyn
       price: parseFloat(price),
       imageUrl: imageUrl || '',
       stock: stock !== undefined && stock !== '' ? parseInt(stock, 10) : 0,
+      hidden: !!hidden,
       createdAt: new Date().toISOString()
     };
 
@@ -224,7 +256,7 @@ app.post("/make-server-745f9946/products", authMiddleware, adminMiddleware, asyn
 });
 
 // Update product (admin only)
-app.put("/make-server-745f9946/products/:code", authMiddleware, adminMiddleware, async (c) => {
+app.put("/make-server-745f9946/products/:code{.+}", authMiddleware, adminMiddleware, async (c) => {
   try {
     const code = c.req.param('code');
     const updates = await c.req.json();
@@ -242,6 +274,7 @@ app.put("/make-server-745f9946/products/:code", authMiddleware, adminMiddleware,
       stock: updates.stock !== undefined && updates.stock !== ''
         ? parseInt(updates.stock, 10)
         : existing.stock ?? 0,
+      hidden: updates.hidden !== undefined ? !!updates.hidden : (existing.hidden ?? false),
       updatedAt: new Date().toISOString()
     };
 
@@ -254,7 +287,7 @@ app.put("/make-server-745f9946/products/:code", authMiddleware, adminMiddleware,
 });
 
 // Delete product (admin only)
-app.delete("/make-server-745f9946/products/:code", authMiddleware, adminMiddleware, async (c) => {
+app.delete("/make-server-745f9946/products/:code{.+}", authMiddleware, adminMiddleware, async (c) => {
   try {
     const code = c.req.param('code');
 
@@ -309,7 +342,38 @@ app.post("/make-server-745f9946/upload-image", authMiddleware, adminMiddleware, 
   }
 });
 
+// ===== VENDOR ROUTES =====
+
+// List vendors (admin only) - used to associate clients to vendors
+app.get("/make-server-745f9946/vendors", authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const supabase = getServiceClient();
+    const { data, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (error) {
+      console.log(`Error al listar vendedores: ${error.message}`);
+      return c.json({ error: 'Error al obtener vendedores' }, 500);
+    }
+    const vendors = (data?.users || [])
+      .filter((u: any) => (u.user_metadata?.role || 'user') !== 'admin')
+      .map((u: any) => ({
+        id: u.id,
+        name: u.user_metadata?.name || u.email,
+        email: u.email,
+      }));
+    return c.json({ vendors });
+  } catch (error) {
+    console.log(`Error al obtener vendedores: ${error}`);
+    return c.json({ error: 'Error al obtener vendedores' }, 500);
+  }
+});
+
 // ===== CLIENT ROUTES =====
+
+// Helper: does a client belong to a vendor?
+const clientVisibleTo = (client: any, userId: string) =>
+  client.allVendors === true ||
+  (Array.isArray(client.vendorIds) && client.vendorIds.includes(userId)) ||
+  client.vendorId === userId;
 
 // Create client (admin only)
 app.post("/make-server-745f9946/clients", authMiddleware, async (c) => {
@@ -318,7 +382,7 @@ app.post("/make-server-745f9946/clients", authMiddleware, async (c) => {
     if ((user.user_metadata?.role || 'user') !== 'admin') {
       return c.json({ error: 'Solo un administrador puede crear clientes' }, 403);
     }
-    const { name, rif, address } = await c.req.json();
+    const { name, rif, address, vendorIds, allVendors } = await c.req.json();
 
     if (!name || !rif || !address) {
       return c.json({ error: 'Nombre, RIF y dirección son requeridos' }, 400);
@@ -332,6 +396,8 @@ app.post("/make-server-745f9946/clients", authMiddleware, async (c) => {
       address,
       vendorId: user.id,
       vendorName: user.user_metadata?.name || user.email,
+      vendorIds: Array.isArray(vendorIds) ? vendorIds : [],
+      allVendors: !!allVendors,
       createdAt: new Date().toISOString()
     };
 
@@ -343,7 +409,7 @@ app.post("/make-server-745f9946/clients", authMiddleware, async (c) => {
   }
 });
 
-// Get clients (vendors see only their own clients, admins see all)
+// Get clients (vendors see clients associated to them, admins see all)
 app.get("/make-server-745f9946/clients", authMiddleware, async (c) => {
   try {
     const user = c.get('user');
@@ -353,7 +419,7 @@ app.get("/make-server-745f9946/clients", authMiddleware, async (c) => {
 
     const clients = userRole === 'admin'
       ? allClients
-      : allClients.filter((client: any) => client.vendorId === user.id);
+      : allClients.filter((client: any) => clientVisibleTo(client, user.id));
 
     return c.json({ clients });
   } catch (error) {
@@ -375,7 +441,7 @@ app.put("/make-server-745f9946/clients/:id", authMiddleware, async (c) => {
       return c.json({ error: 'Cliente no encontrado' }, 404);
     }
 
-    if (userRole !== 'admin' && existing.vendorId !== user.id) {
+    if (userRole !== 'admin' && !clientVisibleTo(existing, user.id)) {
       return c.json({ error: 'Acceso denegado - no eres el vendedor de este cliente' }, 403);
     }
 
@@ -384,6 +450,13 @@ app.put("/make-server-745f9946/clients/:id", authMiddleware, async (c) => {
       name: updates.name ?? existing.name,
       rif: updates.rif ?? existing.rif,
       address: updates.address ?? existing.address,
+      // Vendor associations can only be changed by an admin.
+      vendorIds: userRole === 'admin' && updates.vendorIds !== undefined
+        ? (Array.isArray(updates.vendorIds) ? updates.vendorIds : [])
+        : (existing.vendorIds ?? []),
+      allVendors: userRole === 'admin' && updates.allVendors !== undefined
+        ? !!updates.allVendors
+        : (existing.allVendors ?? false),
       updatedAt: new Date().toISOString()
     };
 
@@ -401,6 +474,10 @@ app.delete("/make-server-745f9946/clients/:id", authMiddleware, async (c) => {
     const user = c.get('user');
     const userRole = user.user_metadata?.role || 'user';
     const id = c.req.param('id');
+
+    if (id === DEFAULT_CLIENT_ID) {
+      return c.json({ error: 'No se puede eliminar el cliente por defecto' }, 400);
+    }
 
     const existing = await kv.get(`client:${id}`);
     if (!existing) {

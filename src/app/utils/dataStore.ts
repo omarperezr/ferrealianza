@@ -9,6 +9,7 @@ export interface Product {
   price: number;
   imageUrl: string;
   stock: number;
+  hidden?: boolean;
   _pending?: boolean;
 }
 
@@ -19,6 +20,8 @@ export interface Client {
   address: string;
   vendorId: string;
   vendorName: string;
+  vendorIds?: string[];
+  allVendors?: boolean;
   createdAt?: string;
   _pending?: boolean;
 }
@@ -191,6 +194,46 @@ export async function saveProduct(
       ? { kind: 'product.update', code: editingCode, payload: form }
       : { kind: 'product.create', payload: form },
   );
+}
+
+/** Toggle whether a product is hidden from vendors (admin, online only). */
+export async function setProductHidden(
+  accessToken: string | null,
+  code: string,
+  hidden: boolean,
+): Promise<void> {
+  await apiFetch(`/products/${code}`, {
+    method: 'PUT',
+    accessToken,
+    body: JSON.stringify({ hidden }),
+  });
+  const cache = (await idbGet<Product[]>(PRODUCTS_KEY)) || [];
+  await idbSet(PRODUCTS_KEY, cache.map((p) => (p.code === code ? { ...p, hidden } : p)));
+}
+
+/** Update the vendor associations of a client (admin, online only). */
+export async function setClientVendors(
+  accessToken: string | null,
+  id: string,
+  assoc: { vendorIds: string[]; allVendors: boolean },
+): Promise<Client> {
+  const data = await apiFetch(`/clients/${id}`, {
+    method: 'PUT',
+    accessToken,
+    body: JSON.stringify(assoc),
+  });
+  const saved: Client = data.client;
+  const cache = (await idbGet<Client[]>(CLIENTS_KEY)) || [];
+  await idbSet(CLIENTS_KEY, cache.map((c) => (c.id === id ? saved : c)));
+  return saved;
+}
+
+/** List vendors (admin only). */
+export async function getVendors(
+  accessToken: string | null,
+): Promise<{ id: string; name: string; email: string }[]> {
+  const data = await apiFetch('/vendors', { accessToken });
+  return data.vendors || [];
 }
 
 export async function deleteProduct(accessToken: string | null, code: string): Promise<void> {

@@ -7,9 +7,9 @@ import {
   saveProduct,
   deleteProduct,
   deleteClient,
+  setProductHidden,
   isOnline,
 } from '../utils/dataStore';
-import { compressImage } from '../utils/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,11 +26,14 @@ import {
   Users,
   Loader2,
   FileText,
+  EyeOff,
+  UserCog,
 } from 'lucide-react';
 import { Logo } from './Logo';
 import { ProfileButton } from './ProfileButton';
 import { SalesPanel } from './SalesPanel';
 import { ClientFormDialog, Client } from './ClientFormDialog';
+import { ClientVendorsDialog } from './ClientVendorsDialog';
 
 interface Product {
   code: string;
@@ -40,6 +43,7 @@ interface Product {
   price: number;
   imageUrl: string;
   stock: number;
+  hidden?: boolean;
 }
 
 export function AdminDashboard() {
@@ -52,6 +56,8 @@ export function AdminDashboard() {
   const [importing, setImporting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [clientDialogOpen, setClientDialogOpen] = useState(false);
+  const [vendorsDialogOpen, setVendorsDialogOpen] = useState(false);
+  const [clientForVendors, setClientForVendors] = useState<Client | null>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
@@ -85,6 +91,17 @@ export function AdminDashboard() {
     setClientDialogOpen(true);
   };
 
+  const openVendorsDialog = (client: Client) => {
+    setClientForVendors(client);
+    setVendorsDialogOpen(true);
+  };
+
+  const vendorSummary = (client: Client) => {
+    if (client.allVendors) return 'Todos';
+    const n = client.vendorIds?.length || 0;
+    return n === 0 ? 'Ninguno' : `${n} vendedor${n === 1 ? '' : 'es'}`;
+  };
+
   const handleDeleteClient = async (client: Client) => {
     if (!confirm(`¿Eliminar al cliente "${client.name}"?`)) return;
     try {
@@ -106,12 +123,29 @@ export function AdminDashboard() {
   };
 
   const handleImageUpload = async (file: File): Promise<string> => {
-    const compressed = await compressImage(file);
+    // Upload the original file as-is. Re-encoding through a <canvas> stripped the
+    // color profile of some images (e.g. CMYK JPEGs), producing a black image.
     const body = new FormData();
-    body.append('file', compressed);
+    body.append('file', file);
 
     const data = await apiFetch('/upload-image', { method: 'POST', accessToken, body });
     return data.imageUrl;
+  };
+
+  const toggleHidden = async (product: Product) => {
+    const next = !product.hidden;
+    // Optimistic update.
+    setProducts((prev) =>
+      prev.map((p) => (p.code === product.code ? { ...p, hidden: next } : p)),
+    );
+    try {
+      await setProductHidden(accessToken, product.code, next);
+    } catch (error: any) {
+      setProducts((prev) =>
+        prev.map((p) => (p.code === product.code ? { ...p, hidden: !next } : p)),
+      );
+      toast.error(error.message || 'No se pudo cambiar la visibilidad', { id: 'hide' });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -214,24 +248,51 @@ export function AdminDashboard() {
         imageUrl: String(row.imageUrl ?? row.imagen ?? '').trim(),
       })).filter((p) => p.code && p.name);
 
+      // Load current products to decide, per code, whether to create, update or skip.
+      const { items: current } = await getProducts(accessToken);
+      const byCode = new Map(current.map((p) => [p.code, p]));
+
+      // True when the spreadsheet row matches the stored product on every field.
+      const isUnchanged = (row: any, existing: any) =>
+        existing.name === row.name &&
+        existing.category === row.category &&
+        (existing.amountPerPackage || '') === row.amountPerPackage &&
+        Number(existing.price) === Number(row.price) &&
+        Number(existing.stock ?? 0) === Number(row.stock) &&
+        (existing.imageUrl || '') === row.imageUrl;
+
       const total = products.length;
       let done = 0;
-      let ok = 0;
+      let created = 0;
+      let updated = 0;
+      let skipped = 0;
       const queue = [...products];
 
       // Import in parallel batches for speed (instead of one-by-one).
       const worker = async () => {
         while (queue.length) {
-          const productData = queue.shift()!;
+          const row = queue.shift()!;
+          const existing = byCode.get(row.code);
           try {
-            await apiFetch('/products', {
-              method: 'POST',
-              accessToken,
-              body: JSON.stringify(productData),
-            });
-            ok++;
+            if (!existing) {
+              await apiFetch('/products', {
+                method: 'POST',
+                accessToken,
+                body: JSON.stringify(row),
+              });
+              created++;
+            } else if (isUnchanged(row, existing)) {
+              skipped++;
+            } else {
+              await apiFetch(`/products/${row.code}`, {
+                method: 'PUT',
+                accessToken,
+                body: JSON.stringify(row),
+              });
+              updated++;
+            }
           } catch {
-            // Skip rows that fail (e.g. duplicate code) and keep going.
+            // Skip rows that fail and keep going.
           }
           done++;
           if (done % 20 === 0 || done === total) {
@@ -242,7 +303,10 @@ export function AdminDashboard() {
 
       await Promise.all(Array.from({ length: 6 }, worker));
 
-      toast.success(`${ok} de ${total} productos importados`, { id: 'import' });
+      toast.success(
+        `Importación lista: ${created} creados, ${updated} actualizados, ${skipped} sin cambios`,
+        { id: 'import' },
+      );
       loadProducts();
     } catch (error) {
       toast.error('Error al importar productos desde Excel', { id: 'import' });
@@ -337,7 +401,7 @@ export function AdminDashboard() {
                     <th className="p-3 font-semibold">Nombre</th>
                     <th className="p-3 font-semibold">RIF</th>
                     <th className="p-3 font-semibold">Dirección</th>
-                    <th className="p-3 font-semibold">Vendedor</th>
+                    <th className="p-3 font-semibold">Vendedores</th>
                     <th className="p-3 font-semibold text-right">Acciones</th>
                   </tr>
                 </thead>
@@ -347,7 +411,16 @@ export function AdminDashboard() {
                       <td className="p-3 font-medium">{client.name}</td>
                       <td className="p-3 text-slate-600">{client.rif}</td>
                       <td className="p-3 text-slate-600">{client.address}</td>
-                      <td className="p-3 text-slate-600">{client.vendorName}</td>
+                      <td className="p-3 text-slate-600">
+                        <button
+                          type="button"
+                          onClick={() => openVendorsDialog(client)}
+                          className="inline-flex items-center gap-1.5 text-amber-700 hover:text-amber-800 hover:underline"
+                        >
+                          <UserCog className="w-4 h-4" />
+                          {vendorSummary(client)}
+                        </button>
+                      </td>
                       <td className="p-3">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -384,6 +457,14 @@ export function AdminDashboard() {
               open={clientDialogOpen}
               onOpenChange={setClientDialogOpen}
               client={editingClient}
+              onSaved={() => loadClients()}
+            />
+
+            <ClientVendorsDialog
+              accessToken={accessToken}
+              client={clientForVendors}
+              open={vendorsDialogOpen}
+              onOpenChange={setVendorsDialogOpen}
               onSaved={() => loadClients()}
             />
           </div>
@@ -498,7 +579,7 @@ export function AdminDashboard() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map((product) => (
-            <Card key={product.code} className="overflow-hidden border-slate-200 hover:shadow-lg transition-shadow p-0 gap-0">
+            <Card key={product.code} className={`overflow-hidden border-slate-200 hover:shadow-lg transition-shadow p-0 gap-0 ${product.hidden ? 'opacity-70' : ''}`}>
               <div className="relative h-44 bg-slate-100 overflow-hidden">
                 {product.imageUrl ? (
                   <img
@@ -522,6 +603,12 @@ export function AdminDashboard() {
                 >
                   {(product.stock ?? 0) > 0 ? `Stock: ${product.stock}` : 'Sin stock'}
                 </span>
+                {product.hidden && (
+                  <span className="absolute top-2 left-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-white flex items-center gap-1">
+                    <EyeOff className="w-3 h-3" />
+                    Oculto
+                  </span>
+                )}
               </div>
               <CardContent className="p-4">
                 <div className="space-y-2">
@@ -556,6 +643,15 @@ export function AdminDashboard() {
                       Eliminar
                     </Button>
                   </div>
+                  <label className="flex items-center gap-2 pt-1 text-sm text-slate-600 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={!!product.hidden}
+                      onChange={() => toggleHidden(product)}
+                      className="h-4 w-4 rounded border-slate-300 accent-amber-600"
+                    />
+                    Ocultar a los vendedores
+                  </label>
                 </div>
               </CardContent>
             </Card>
