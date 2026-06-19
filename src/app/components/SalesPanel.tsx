@@ -72,7 +72,7 @@ const GOLD: [number, number, number] = [201, 162, 39];
 const DARK: [number, number, number] = [26, 29, 33];
 
 export function SalesPanel() {
-  const { accessToken, user } = useAuth();
+  const { accessToken, user, isAdmin } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -481,18 +481,20 @@ export function SalesPanel() {
                   </SelectContent>
                 </Select>
               </div>
-              <ClientFormDialog
-                accessToken={accessToken}
-                open={clientDialogOpen}
-                onOpenChange={setClientDialogOpen}
-                onSaved={handleClientSaved}
-                trigger={
-                  <Button type="button" variant="outline" className="w-full sm:w-auto shrink-0">
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Nuevo cliente
-                  </Button>
-                }
-              />
+              {isAdmin && (
+                <ClientFormDialog
+                  accessToken={accessToken}
+                  open={clientDialogOpen}
+                  onOpenChange={setClientDialogOpen}
+                  onSaved={handleClientSaved}
+                  trigger={
+                    <Button type="button" variant="outline" className="w-full sm:w-auto shrink-0">
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Nuevo cliente
+                    </Button>
+                  }
+                />
+              )}
             </div>
 
             {cart.length === 0 ? (

@@ -311,10 +311,13 @@ app.post("/make-server-745f9946/upload-image", authMiddleware, adminMiddleware, 
 
 // ===== CLIENT ROUTES =====
 
-// Create client (associated to the logged-in vendor)
+// Create client (admin only)
 app.post("/make-server-745f9946/clients", authMiddleware, async (c) => {
   try {
     const user = c.get('user');
+    if ((user.user_metadata?.role || 'user') !== 'admin') {
+      return c.json({ error: 'Solo un administrador puede crear clientes' }, 403);
+    }
     const { name, rif, address } = await c.req.json();
 
     if (!name || !rif || !address) {
