@@ -16,9 +16,13 @@ import {
   Package,
   Users,
   Loader2,
+  FileText,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Logo } from './Logo';
+import { ProfileButton } from './ProfileButton';
+import { SalesPanel } from './SalesPanel';
+import { ClientFormDialog, Client } from './ClientFormDialog';
 
 interface Product {
   code: string;
@@ -30,25 +34,17 @@ interface Product {
   stock: number;
 }
 
-interface Client {
-  id: string;
-  name: string;
-  rif: string;
-  address: string;
-  vendorId: string;
-  vendorName: string;
-  createdAt: string;
-}
-
 export function AdminDashboard() {
-  const { accessToken, signOut, user } = useAuth();
+  const { accessToken, signOut } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [view, setView] = useState<'products' | 'clients'>('products');
+  const [view, setView] = useState<'products' | 'clients' | 'sales'>('products');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [clientDialogOpen, setClientDialogOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
     code: '',
@@ -72,6 +68,27 @@ export function AdminDashboard() {
       setClients(data.clients || []);
     } catch (error: any) {
       toast.error(error.message || 'Error al cargar clientes', { id: 'clients' });
+    }
+  };
+
+  const openNewClient = () => {
+    setEditingClient(null);
+    setClientDialogOpen(true);
+  };
+
+  const openEditClient = (client: Client) => {
+    setEditingClient(client);
+    setClientDialogOpen(true);
+  };
+
+  const handleDeleteClient = async (client: Client) => {
+    if (!confirm(`¿Eliminar al cliente "${client.name}"?`)) return;
+    try {
+      await apiFetch(`/clients/${client.id}`, { method: 'DELETE', accessToken });
+      toast.success('Cliente eliminado', { id: 'client-del' });
+      loadClients();
+    } catch (error: any) {
+      toast.error(error.message || 'Error al eliminar el cliente', { id: 'client-del' });
     }
   };
 
@@ -246,9 +263,7 @@ export function AdminDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden sm:inline text-sm text-slate-300">
-              {user?.user_metadata?.name}
-            </span>
+            <ProfileButton />
             <Button
               variant="outline"
               size="sm"
@@ -256,7 +271,7 @@ export function AdminDashboard() {
               className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700 hover:text-white"
             >
               <LogOut className="w-4 h-4 mr-2" />
-              Salir
+              <span className="hidden sm:inline">Salir</span>
             </Button>
           </div>
         </div>
@@ -278,11 +293,26 @@ export function AdminDashboard() {
             <Users className="w-4 h-4" />
             Clientes
           </button>
+          <button
+            className={`${tabBase} ${view === 'sales' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            onClick={() => setView('sales')}
+          >
+            <FileText className="w-4 h-4" />
+            Presupuestos
+          </button>
         </div>
+
+        {view === 'sales' && <SalesPanel />}
 
         {view === 'clients' && (
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-800">Todos los Clientes Registrados</h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold text-slate-800">Clientes Registrados</h2>
+              <Button onClick={openNewClient}>
+                <Plus className="w-4 h-4 mr-2" />
+                Nuevo Cliente
+              </Button>
+            </div>
             <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
               <table className="w-full text-sm">
                 <thead>
@@ -291,6 +321,7 @@ export function AdminDashboard() {
                     <th className="p-3 font-semibold">RIF</th>
                     <th className="p-3 font-semibold">Dirección</th>
                     <th className="p-3 font-semibold">Vendedor</th>
+                    <th className="p-3 font-semibold text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -300,6 +331,25 @@ export function AdminDashboard() {
                       <td className="p-3 text-slate-600">{client.rif}</td>
                       <td className="p-3 text-slate-600">{client.address}</td>
                       <td className="p-3 text-slate-600">{client.vendorName}</td>
+                      <td className="p-3">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditClient(client)}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:text-red-700"
+                            onClick={() => handleDeleteClient(client)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -311,6 +361,14 @@ export function AdminDashboard() {
                 </div>
               )}
             </div>
+
+            <ClientFormDialog
+              accessToken={accessToken}
+              open={clientDialogOpen}
+              onOpenChange={setClientDialogOpen}
+              client={editingClient}
+              onSaved={() => loadClients()}
+            />
           </div>
         )}
 

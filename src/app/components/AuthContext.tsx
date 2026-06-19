@@ -19,6 +19,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string, role: string) => Promise<void>;
   signOut: () => Promise<void>;
+  updateName: (name: string) => Promise<void>;
   isAdmin: boolean;
 }
 
@@ -58,8 +59,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password }),
     });
 
+    // Establish the session on the Supabase client so that profile updates
+    // (e.g. changing the display name) and session persistence work.
+    if (data.session?.access_token && data.session?.refresh_token) {
+      try {
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+      } catch {
+        // Non-fatal: we still keep the token in state below.
+      }
+    }
+
     setUser(data.user);
     setAccessToken(data.session.access_token);
+  };
+
+  const updateName = async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error('El nombre no puede estar vacío');
+
+    const { data, error } = await supabase.auth.updateUser({
+      data: { name: trimmed },
+    });
+    if (error) throw new Error(error.message);
+    if (data.user) setUser(data.user as User);
   };
 
   const signUp = async (email: string, password: string, name: string, role: string) => {
@@ -85,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = user?.user_metadata?.role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, loading, signIn, signUp, signOut, isAdmin }}>
+    <AuthContext.Provider value={{ user, accessToken, loading, signIn, signUp, signOut, updateName, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );
