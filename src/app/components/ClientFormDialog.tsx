@@ -1,5 +1,7 @@
 import { useState, useEffect, ReactNode } from 'react';
-import { apiFetch } from '../utils/api';
+import { saveClient, Client } from '../utils/dataStore';
+
+export type { Client };
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,16 +14,6 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-
-export interface Client {
-  id: string;
-  name: string;
-  rif: string;
-  address: string;
-  vendorId: string;
-  vendorName: string;
-  createdAt?: string;
-}
 
 interface ClientFormDialogProps {
   accessToken: string | null;
@@ -57,14 +49,17 @@ export function ClientFormDialog({
     e.preventDefault();
     setSaving(true);
     try {
-      const data = await apiFetch(isEdit ? `/clients/${client!.id}` : '/clients', {
-        method: isEdit ? 'PUT' : 'POST',
-        accessToken,
-        body: JSON.stringify(form),
-      });
-      toast.success(isEdit ? 'Cliente actualizado' : 'Cliente registrado', { id: 'client-save' });
+      const saved = await saveClient(accessToken, form, client);
+      toast.success(
+        saved._pending
+          ? 'Cliente guardado localmente (se sincronizará al reconectar)'
+          : isEdit
+            ? 'Cliente actualizado'
+            : 'Cliente registrado',
+        { id: 'client-save' },
+      );
       onOpenChange(false);
-      onSaved(data.client);
+      onSaved(saved);
     } catch (error: any) {
       toast.error(error.message || 'Error al guardar el cliente', { id: 'client-save' });
     } finally {

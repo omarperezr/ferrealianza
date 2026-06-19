@@ -4,6 +4,7 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { UserDashboard } from './components/UserDashboard';
 import { Toaster } from 'sonner';
 import { Logo } from './components/Logo';
+import { OfflineSync } from './components/OfflineSync';
 
 function AppContent() {
   const { user, loading, isAdmin } = useAuth();
@@ -23,7 +24,12 @@ function AppContent() {
     return <LoginPage />;
   }
 
-  return isAdmin ? <AdminDashboard /> : <UserDashboard />;
+  return (
+    <>
+      {isAdmin ? <AdminDashboard /> : <UserDashboard />}
+      <OfflineSync />
+    </>
+  );
 }
 
 export default function App() {

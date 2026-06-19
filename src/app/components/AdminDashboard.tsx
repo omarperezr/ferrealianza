@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { apiFetch } from '../utils/api';
+import {
+  getProducts,
+  getClients,
+  saveProduct,
+  deleteProduct,
+  deleteClient,
+  isOnline,
+} from '../utils/dataStore';
+import { compressImage } from '../utils/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +27,6 @@ import {
   Loader2,
   FileText,
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { Logo } from './Logo';
 import { ProfileButton } from './ProfileButton';
 import { SalesPanel } from './SalesPanel';
@@ -63,12 +71,8 @@ export function AdminDashboard() {
   }, []);
 
   const loadClients = async () => {
-    try {
-      const data = await apiFetch('/clients', { accessToken });
-      setClients(data.clients || []);
-    } catch (error: any) {
-      toast.error(error.message || 'Error al cargar clientes', { id: 'clients' });
-    }
+    const { items } = await getClients(accessToken);
+    setClients(items);
   };
 
   const openNewClient = () => {
@@ -84,7 +88,7 @@ export function AdminDashboard() {
   const handleDeleteClient = async (client: Client) => {
     if (!confirm(`¿Eliminar al cliente "${client.name}"?`)) return;
     try {
-      await apiFetch(`/clients/${client.id}`, { method: 'DELETE', accessToken });
+      await deleteClient(accessToken, client.id);
       toast.success('Cliente eliminado', { id: 'client-del' });
       loadClients();
     } catch (error: any) {
@@ -94,24 +98,19 @@ export function AdminDashboard() {
 
   const loadProducts = async () => {
     try {
-      const data = await apiFetch('/products', { accessToken });
-      setProducts(data.products || []);
-    } catch (error: any) {
-      toast.error(error.message || 'Error al cargar productos', { id: 'products' });
+      const { items } = await getProducts(accessToken);
+      setProducts(items);
     } finally {
       setLoading(false);
     }
   };
 
   const handleImageUpload = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
+    const compressed = await compressImage(file);
+    const body = new FormData();
+    body.append('file', compressed);
 
-    const data = await apiFetch('/upload-image', {
-      method: 'POST',
-      accessToken,
-      body: formData,
-    });
+    const data = await apiFetch('/upload-image', { method: 'POST', accessToken, body });
     return data.imageUrl;
   };
 
@@ -123,26 +122,25 @@ export function AdminDashboard() {
       let imageUrl = formData.imageUrl;
 
       if (imageFile) {
+        if (!isOnline()) {
+          toast.error('Sube imágenes con conexión a internet', { id: 'product-save' });
+          setSaving(false);
+          return;
+        }
         imageUrl = await handleImageUpload(imageFile);
       }
 
       const productData = { ...formData, imageUrl };
+      await saveProduct(accessToken, productData, editingProduct?.code);
 
-      if (editingProduct) {
-        await apiFetch(`/products/${editingProduct.code}`, {
-          method: 'PUT',
-          accessToken,
-          body: JSON.stringify(productData),
-        });
-        toast.success('Producto actualizado exitosamente', { id: 'product-save' });
-      } else {
-        await apiFetch('/products', {
-          method: 'POST',
-          accessToken,
-          body: JSON.stringify(productData),
-        });
-        toast.success('Producto creado exitosamente', { id: 'product-save' });
-      }
+      toast.success(
+        !isOnline()
+          ? 'Producto guardado localmente (se sincronizará al reconectar)'
+          : editingProduct
+            ? 'Producto actualizado exitosamente'
+            : 'Producto creado exitosamente',
+        { id: 'product-save' },
+      );
 
       setDialogOpen(false);
       resetForm();
@@ -158,7 +156,7 @@ export function AdminDashboard() {
     if (!confirm('¿Estás seguro de eliminar este producto?')) return;
 
     try {
-      await apiFetch(`/products/${code}`, { method: 'DELETE', accessToken });
+      await deleteProduct(accessToken, code);
       toast.success('Producto eliminado exitosamente', { id: 'product-del' });
       loadProducts();
     } catch (error: any) {
@@ -200,6 +198,7 @@ export function AdminDashboard() {
 
     setImporting(true);
     try {
+      const XLSX = await import('xlsx');
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -487,6 +486,8 @@ export function AdminDashboard() {
                   <img
                     src={product.imageUrl}
                     alt={product.name}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                 ) : (

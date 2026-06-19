@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
-import { apiFetch } from "../utils/api";
 import { shareProduct } from "../utils/share";
+import { getProducts, getClients } from "../utils/dataStore";
 import { ClientFormDialog, Client } from "./ClientFormDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,9 +35,6 @@ import {
   UserPlus,
   Share2,
 } from "lucide-react";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
 import logoImage from "../../imports/image.png";
 
 const loadImageAsDataUrl = (src: string): Promise<string> =>
@@ -95,20 +92,14 @@ export function SalesPanel() {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const loadClients = async () => {
-    try {
-      const data = await apiFetch("/clients", { accessToken });
-      setClients(data.clients || []);
-    } catch (error: any) {
-      toast.error(error.message || "Error al cargar clientes", { id: "clients" });
-    }
+    const { items } = await getClients(accessToken);
+    setClients(items);
   };
 
   const loadProducts = async () => {
     try {
-      const data = await apiFetch("/products", { accessToken });
-      setProducts(data.products || []);
-    } catch (error: any) {
-      toast.error(error.message || "Error al cargar productos", { id: "products" });
+      const { items } = await getProducts(accessToken);
+      setProducts(items);
     } finally {
       setLoading(false);
     }
@@ -181,6 +172,11 @@ export function SalesPanel() {
       toast.error("Selecciona un cliente para generar el presupuesto", { id: "export" });
       return;
     }
+
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
 
     const doc = new jsPDF();
     const pageW = doc.internal.pageSize.getWidth();
@@ -335,7 +331,8 @@ export function SalesPanel() {
     toast.success("PDF generado exitosamente", { id: "export" });
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
+    const XLSX = await import("xlsx");
     const data = cart.map((item) => ({
       Código: item.code,
       Producto: item.name,
@@ -643,6 +640,8 @@ export function SalesPanel() {
                 <img
                   src={product.imageUrl}
                   alt={product.name}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               ) : (
