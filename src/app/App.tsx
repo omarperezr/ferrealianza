@@ -30,7 +30,13 @@ export default function App() {
   return (
     <AuthProvider>
       <AppContent />
-      <Toaster position="top-right" />
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
+        visibleToasts={3}
+        duration={2500}
+      />
     </AuthProvider>
   );
 }

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { projectId, publicAnonKey } from '../../../utils/supabase/info'
+import { apiFetch } from '../utils/api'
 
 interface User {
   id: string;
@@ -52,51 +53,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const response = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/make-server-745f9946/auth/signin`,
-      {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${publicAnonKey}`
-        },
-        body: JSON.stringify({ email, password })
-      }
-    );
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Error al iniciar sesión');
+    const data = await apiFetch('/auth/signin', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
 
     setUser(data.user);
     setAccessToken(data.session.access_token);
   };
 
   const signUp = async (email: string, password: string, name: string, role: string) => {
-    const response = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/make-server-745f9946/auth/signup`,
-      {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${publicAnonKey}`
-        },
-        body: JSON.stringify({ email, password, name, role })
-      }
-    );
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Error al registrar usuario');
+    await apiFetch('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, name, role }),
+    });
   };
 
   const signOut = async () => {
     if (accessToken) {
-      await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-745f9946/auth/signout`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${accessToken}` }
-        }
-      );
+      try {
+        await apiFetch('/auth/signout', { method: 'POST', accessToken });
+      } catch {
+        // Ignore sign-out errors on the server; we still clear the local session.
+      }
     }
     await supabase.auth.signOut();
     setUser(null);

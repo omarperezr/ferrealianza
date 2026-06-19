@@ -1,31 +1,57 @@
-import { projectId } from '../../../utils/supabase/info';
+import { projectId, publicAnonKey } from '../../../utils/supabase/info';
 
-export async function authenticatedFetch(
-  endpoint: string,
-  options: RequestInit = {},
-  accessToken: string | null
-) {
-  const url = `https://${projectId}.supabase.co/functions/v1${endpoint}`;
-  
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
+const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-745f9946`;
 
-  // Add authorization header if token exists
-  if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
+interface ApiOptions extends Omit<RequestInit, 'headers'> {
+  accessToken?: string | null;
+  headers?: Record<string, string>;
+}
+
+/**
+ * Centralized fetch helper for the Supabase Edge Function.
+ *
+ * It parses responses safely so that a non-JSON body (for example an outdated
+ * Edge Function answering with the plain text "404 Not Found") produces a clear,
+ * actionable error instead of the cryptic
+ * "JSON.parse: unexpected non-whitespace character after JSON data".
+ */
+export async function apiFetch(endpoint: string, options: ApiOptions = {}) {
+  const { accessToken, headers: customHeaders, body, ...rest } = options;
+
+  const headers: Record<string, string> = { ...customHeaders };
+
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  // Always send a bearer token: the user's token when available, otherwise the
+  // public anon key (required by Supabase Edge Functions for public routes).
+  headers['Authorization'] = `Bearer ${accessToken || publicAnonKey}`;
 
-  const data = await response.json();
-  
+  const response = await fetch(`${BASE_URL}${endpoint}`, { ...rest, headers, body });
+
+  const rawBody = await response.text();
+  let data: any = {};
+
+  if (rawBody) {
+    try {
+      data = JSON.parse(rawBody);
+    } catch {
+      // The body was not valid JSON.
+      if (response.status === 404) {
+        throw new Error(
+          'El servidor no reconoce esta operación. Vuelve a desplegar la función Edge de Supabase para habilitar las funciones más recientes.',
+        );
+      }
+      throw new Error(
+        `El servidor respondió de forma inesperada (código ${response.status}). Inténtalo de nuevo.`,
+      );
+    }
+  }
+
   if (!response.ok) {
-    throw new Error(data.error || `API Error: ${response.status}`);
+    throw new Error(data.error || `Error del servidor (${response.status})`);
   }
 
   return data;
