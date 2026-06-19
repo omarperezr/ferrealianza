@@ -23,6 +23,10 @@ export async function compressImage(
     canvas.height = height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return file;
+    // Fill an opaque white background first so transparent (PNG) areas don't
+    // turn black when encoded as JPEG.
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
     ctx.drawImage(img, 0, 0, width, height);
 
     const blob = await new Promise<Blob | null>((resolve) =>
@@ -49,7 +53,16 @@ function readAsDataUrl(file: File): Promise<string> {
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve(img);
+    img.onload = async () => {
+      // Ensure pixels are fully decoded before the caller draws to canvas,
+      // otherwise some browsers paint a blank/black frame.
+      try {
+        if (img.decode) await img.decode();
+      } catch {
+        /* ignore: fall back to the loaded image */
+      }
+      resolve(img);
+    };
     img.onerror = reject;
     img.src = src;
   });
