@@ -28,6 +28,8 @@ interface AuthContextType {
   signUp: (email: string, password: string, name: string, role: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateName: (name: string) => Promise<void>;
+  // Lets a logged-in user change their own password directly (no email).
+  updatePassword: (newPassword: string) => Promise<void>;
   isAdmin: boolean;
   // Admin-only user management (sellers and admins). These never touch products.
   listUsers: () => Promise<ManagedUser[]>;
@@ -99,6 +101,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data.user) setUser(data.user as User);
   };
 
+  // Lets a logged-in user change their own password using their active
+  // session — no email/OTP round-trip required.
+  const updatePassword = async (newPassword: string) => {
+    if (newPassword.length < 6) {
+      throw new Error('La contraseña debe tener al menos 6 caracteres');
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw new Error(error.message);
+  };
+
   const signUp = async (email: string, password: string, name: string, role: string) => {
     await apiFetch('/auth/signup', {
       method: 'POST',
@@ -146,7 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = user?.user_metadata?.role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, loading, signIn, signUp, signOut, updateName, isAdmin, listUsers, createUser, deleteUser }}>
+    <AuthContext.Provider value={{ user, accessToken, loading, signIn, signUp, signOut, updateName, updatePassword, isAdmin, listUsers, createUser, deleteUser }}>
       {children}
     </AuthContext.Provider>
   );
