@@ -12,6 +12,14 @@ interface User {
   };
 }
 
+export interface ManagedUser {
+  id: string;
+  email: string;
+  name: string;
+  role: 'admin' | 'user';
+  createdAt?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   accessToken: string | null;
@@ -21,6 +29,10 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   updateName: (name: string) => Promise<void>;
   isAdmin: boolean;
+  // Admin-only user management (sellers and admins). These never touch products.
+  listUsers: () => Promise<ManagedUser[]>;
+  createUser: (email: string, password: string, name: string, role: string) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -107,10 +119,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(null);
   };
 
+  // --- Admin user management ---
+
+  const listUsers = async (): Promise<ManagedUser[]> => {
+    const data = await apiFetch('/users', { accessToken });
+    return data.users as ManagedUser[];
+  };
+
+  const createUser = async (
+    email: string,
+    password: string,
+    name: string,
+    role: string,
+  ) => {
+    await apiFetch('/users', {
+      method: 'POST',
+      accessToken,
+      body: JSON.stringify({ email, password, name, role }),
+    });
+  };
+
+  const deleteUser = async (id: string) => {
+    await apiFetch(`/users/${id}`, { method: 'DELETE', accessToken });
+  };
+
   const isAdmin = user?.user_metadata?.role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, loading, signIn, signUp, signOut, updateName, isAdmin }}>
+    <AuthContext.Provider value={{ user, accessToken, loading, signIn, signUp, signOut, updateName, isAdmin, listUsers, createUser, deleteUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -34,6 +34,7 @@ import { ProfileButton } from './ProfileButton';
 import { SalesPanel } from './SalesPanel';
 import { ClientFormDialog, Client } from './ClientFormDialog';
 import { ClientVendorsDialog } from './ClientVendorsDialog';
+import { UserManagement } from './UserManagement';
 
 interface Product {
   code: string;
@@ -50,7 +51,7 @@ export function AdminDashboard() {
   const { accessToken, signOut } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [view, setView] = useState<'products' | 'clients' | 'sales'>('products');
+  const [view, setView] = useState<'products' | 'clients' | 'sales' | 'users'>('products');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -381,9 +382,18 @@ export function AdminDashboard() {
             <FileText className="w-4 h-4" />
             Presupuestos
           </button>
+          <button
+            className={`${tabBase} ${view === 'users' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            onClick={() => setView('users')}
+          >
+            <UserCog className="w-4 h-4" />
+            Usuarios
+          </button>
         </div>
 
         {view === 'sales' && <SalesPanel />}
+
+        {view === 'users' && <UserManagement />}
 
         {view === 'clients' && (
           <div className="space-y-4">

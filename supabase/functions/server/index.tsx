@@ -184,6 +184,101 @@ app.post("/make-server-745f9946/auth/signout", authMiddleware, async (c) => {
   return c.json({ message: 'Sesión cerrada exitosamente' });
 });
 
+// ===== USER MANAGEMENT ROUTES (admin only) =====
+//
+// These routes operate ONLY on Supabase Auth users. They never read, write or
+// delete any product (or other kv_store) data, so product inventory cannot be
+// affected by user management.
+
+// List all users (admins and sellers)
+app.get("/make-server-745f9946/users", authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const supabase = getServiceClient();
+    const { data, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (error) {
+      console.log(`Error al listar usuarios: ${error.message}`);
+      return c.json({ error: 'Error al obtener usuarios' }, 500);
+    }
+    const users = (data?.users || []).map((u: any) => ({
+      id: u.id,
+      email: u.email,
+      name: u.user_metadata?.name || u.email,
+      role: u.user_metadata?.role || 'user',
+      createdAt: u.created_at,
+    }));
+    return c.json({ users });
+  } catch (error) {
+    console.log(`Error al obtener usuarios: ${error}`);
+    return c.json({ error: 'Error al obtener usuarios' }, 500);
+  }
+});
+
+// Create a user (seller or admin) — admin only
+app.post("/make-server-745f9946/users", authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const { email, password, name, role } = await c.req.json();
+
+    if (!email || !password || !name) {
+      return c.json({ error: 'Email, contraseña y nombre son requeridos' }, 400);
+    }
+    if (String(password).length < 6) {
+      return c.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, 400);
+    }
+    const finalRole = role === 'admin' ? 'admin' : 'user';
+
+    const supabase = getServiceClient();
+    const { data, error } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      user_metadata: { name, role: finalRole },
+      // Automatically confirm the email since no email server is configured.
+      email_confirm: true,
+    });
+
+    if (error) {
+      console.log(`Error al crear usuario: ${error.message}`);
+      return c.json({ error: `Error al crear usuario: ${error.message}` }, 400);
+    }
+
+    return c.json({
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.user_metadata?.name || data.user.email,
+        role: data.user.user_metadata?.role || 'user',
+        createdAt: data.user.created_at,
+      },
+    });
+  } catch (error) {
+    console.log(`Error al crear usuario: ${error}`);
+    return c.json({ error: 'Error en el servidor al crear usuario' }, 500);
+  }
+});
+
+// Delete a user — admin only (cannot delete yourself)
+app.delete("/make-server-745f9946/users/:id", authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const requester = c.get('user');
+    const id = c.req.param('id');
+
+    if (id === requester.id) {
+      return c.json({ error: 'No puedes eliminar tu propio usuario' }, 400);
+    }
+
+    const supabase = getServiceClient();
+    const { error } = await supabase.auth.admin.deleteUser(id);
+    if (error) {
+      console.log(`Error al eliminar usuario: ${error.message}`);
+      return c.json({ error: `Error al eliminar usuario: ${error.message}` }, 400);
+    }
+
+    return c.json({ message: 'Usuario eliminado exitosamente' });
+  } catch (error) {
+    console.log(`Error al eliminar usuario: ${error}`);
+    return c.json({ error: 'Error en el servidor al eliminar usuario' }, 500);
+  }
+});
+
 // ===== PRODUCT ROUTES =====
 
 // Get all products (vendors don't see hidden products)
