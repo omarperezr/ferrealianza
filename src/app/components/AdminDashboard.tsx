@@ -4,6 +4,8 @@ import { apiFetch } from '../utils/api';
 import {
   getProducts,
   getClients,
+  getCachedProducts,
+  getCachedClients,
   saveProduct,
   deleteProduct,
   deleteClient,
@@ -72,10 +74,29 @@ export function AdminDashboard() {
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
 
+  // Show cached data instantly, then refresh from the network. Re-runs when the
+  // access token is ready so everything appears on first load (no manual refresh).
   useEffect(() => {
-    loadProducts();
-    loadClients();
-  }, []);
+    let cancelled = false;
+    (async () => {
+      const [cachedProducts, cachedClients] = await Promise.all([
+        getCachedProducts(),
+        getCachedClients(),
+      ]);
+      if (cancelled) return;
+      if (cachedProducts.length) {
+        setProducts(cachedProducts);
+        setLoading(false);
+      }
+      if (cachedClients.length) setClients(cachedClients);
+
+      await Promise.all([loadProducts(), loadClients()]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken]);
 
   const loadClients = async () => {
     const { items } = await getClients(accessToken);
@@ -327,7 +348,7 @@ export function AdminDashboard() {
   }
 
   const tabBase =
-    'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors';
+    'flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors';
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -360,7 +381,7 @@ export function AdminDashboard() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="inline-flex gap-1 mb-6 bg-slate-100 p-1 rounded-xl">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 mb-6 bg-slate-100 p-1.5 rounded-xl">
           <button
             className={`${tabBase} ${view === 'products' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
             onClick={() => setView('products')}
@@ -587,10 +608,10 @@ export function AdminDashboard() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
           {products.map((product) => (
             <Card key={product.code} className={`overflow-hidden border-slate-200 hover:shadow-lg transition-shadow p-0 gap-0 ${product.hidden ? 'opacity-70' : ''}`}>
-              <div className="relative h-44 bg-slate-100 overflow-hidden">
+              <div className="relative h-28 sm:h-36 bg-slate-100 overflow-hidden">
                 {product.imageUrl ? (
                   <img
                     src={product.imageUrl}
@@ -620,25 +641,25 @@ export function AdminDashboard() {
                   </span>
                 )}
               </div>
-              <CardContent className="p-4">
-                <div className="space-y-2">
+              <CardContent className="p-3 sm:p-4">
+                <div className="space-y-1.5">
                   <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-semibold text-base leading-snug line-clamp-2">{product.name}</h3>
+                    <h3 className="font-semibold text-base sm:text-lg leading-snug line-clamp-2">{product.name}</h3>
                     <span className="text-xs text-slate-400 whitespace-nowrap">{product.code}</span>
                   </div>
-                  <span className="inline-block text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                  <span className="inline-block text-xs sm:text-sm font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
                     {product.category}
                   </span>
                   {product.amountPerPackage && (
-                    <p className="text-xs text-slate-500">Paquete: {product.amountPerPackage}</p>
+                    <p className="text-sm text-slate-500">Paquete: {product.amountPerPackage}</p>
                   )}
-                  <p className="text-2xl font-bold text-amber-600">${product.price.toFixed(2)}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-amber-600">${product.price.toFixed(2)}</p>
                   <div className="flex gap-2 pt-1">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleEdit(product)}
-                      className="flex-1"
+                      className="flex-1 h-9"
                     >
                       <Pencil className="w-4 h-4 mr-1" />
                       Editar
@@ -647,7 +668,7 @@ export function AdminDashboard() {
                       variant="destructive"
                       size="sm"
                       onClick={() => handleDelete(product.code)}
-                      className="flex-1"
+                      className="flex-1 h-9"
                     >
                       <Trash2 className="w-4 h-4 mr-1" />
                       Eliminar

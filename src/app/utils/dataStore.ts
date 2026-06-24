@@ -52,6 +52,16 @@ async function enqueue(op: OutboxOp) {
 
 // ---------- Reads (network-first, cache fallback) ----------
 
+/** Reads the locally cached products without hitting the network (instant). */
+export async function getCachedProducts(): Promise<Product[]> {
+  return (await idbGet<Product[]>(PRODUCTS_KEY)) || [];
+}
+
+/** Reads the locally cached clients without hitting the network (instant). */
+export async function getCachedClients(): Promise<Client[]> {
+  return (await idbGet<Client[]>(CLIENTS_KEY)) || [];
+}
+
 export async function getProducts(
   accessToken: string | null,
 ): Promise<{ items: Product[]; offline: boolean }> {

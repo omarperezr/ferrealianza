@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { shareProduct } from "../utils/share";
-import { getProducts, getClients } from "../utils/dataStore";
+import {
+  getProducts,
+  getClients,
+  getCachedProducts,
+  getCachedClients,
+} from "../utils/dataStore";
 import { ClientFormDialog, Client } from "./ClientFormDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,38 +76,98 @@ interface CartItem extends Product {
 const GOLD: [number, number, number] = [201, 162, 39];
 const DARK: [number, number, number] = [26, 29, 33];
 
+// localStorage key for the persisted cart (survives page refreshes).
+const CART_STORAGE_KEY = "ferrealianza-cart";
+
+interface PersistedCart {
+  cart: CartItem[];
+  discount: number;
+  tax: number;
+  selectedClientId: string;
+}
+
+const loadPersistedCart = (): PersistedCart => {
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        cart: Array.isArray(parsed.cart) ? parsed.cart : [],
+        discount: Number(parsed.discount) || 0,
+        tax: Number(parsed.tax) || 0,
+        selectedClientId: typeof parsed.selectedClientId === "string" ? parsed.selectedClientId : "",
+      };
+    }
+  } catch {
+    /* ignore corrupt storage */
+  }
+  return { cart: [], discount: 0, tax: 0, selectedClientId: "" };
+};
+
 export function SalesPanel() {
   const { accessToken, user, isAdmin } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => loadPersistedCart().cart);
   const [loading, setLoading] = useState(true);
   const [cartOpen, setCartOpen] = useState(false);
-  const [discount, setDiscount] = useState(0);
-  const [tax, setTax] = useState(0);
+  const [discount, setDiscount] = useState(() => loadPersistedCart().discount);
+  const [tax, setTax] = useState(() => loadPersistedCart().tax);
   const [searchTerm, setSearchTerm] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
-  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [selectedClientId, setSelectedClientId] = useState<string>(
+    () => loadPersistedCart().selectedClientId,
+  );
   const [clientDialogOpen, setClientDialogOpen] = useState(false);
 
+  // Show cached data instantly, then refresh from the network. Re-runs when the
+  // access token becomes available so the catalog appears on first load without
+  // needing a manual refresh.
   useEffect(() => {
-    loadProducts();
-    loadClients();
-  }, []);
+    let cancelled = false;
+
+    (async () => {
+      const [cachedProducts, cachedClients] = await Promise.all([
+        getCachedProducts(),
+        getCachedClients(),
+      ]);
+      if (cancelled) return;
+      if (cachedProducts.length) setProducts(cachedProducts);
+      if (cachedClients.length) setClients(cachedClients);
+      if (cachedProducts.length) setLoading(false);
+
+      // Network refresh (falls back to cache when offline).
+      const [{ items: freshProducts }, { items: freshClients }] = await Promise.all([
+        getProducts(accessToken),
+        getClients(accessToken),
+      ]);
+      if (cancelled) return;
+      setProducts(freshProducts);
+      setClients(freshClients);
+      setLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
+
+  // Persist the cart (and its totals/client) so a page refresh keeps it.
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        CART_STORAGE_KEY,
+        JSON.stringify({ cart, discount, tax, selectedClientId }),
+      );
+    } catch {
+      /* storage unavailable: ignore */
+    }
+  }, [cart, discount, tax, selectedClientId]);
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const loadClients = async () => {
     const { items } = await getClients(accessToken);
     setClients(items);
-  };
-
-  const loadProducts = async () => {
-    try {
-      const { items } = await getProducts(accessToken);
-      setProducts(items);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleClientSaved = (client: Client) => {
@@ -631,13 +696,13 @@ export function SalesPanel() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 pb-24">
         {filteredProducts.map((product) => (
           <Card
             key={product.code}
             className="group overflow-hidden border-slate-200 hover:border-amber-300 hover:shadow-lg transition-all p-0 gap-0"
           >
-            <div className="relative h-44 bg-slate-100 overflow-hidden">
+            <div className="relative h-28 sm:h-36 bg-slate-100 overflow-hidden">
               {product.imageUrl ? (
                 <img
                   src={product.imageUrl}
@@ -648,7 +713,7 @@ export function SalesPanel() {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <Package className="w-12 h-12 text-slate-300" />
+                  <Package className="w-10 h-10 text-slate-300" />
                 </div>
               )}
               <span className="absolute top-2 left-2 bg-slate-900/80 text-white text-xs px-2 py-0.5 rounded-full backdrop-blur">
@@ -663,30 +728,34 @@ export function SalesPanel() {
                 <Share2 className="w-4 h-4" />
               </button>
             </div>
-            <CardContent className="p-4">
-              <div className="space-y-2">
-                <span className="inline-block text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+            <CardContent className="p-3 sm:p-4">
+              <div className="space-y-1.5">
+                <span className="inline-block text-xs sm:text-sm font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
                   {product.category}
                 </span>
-                <h3 className="font-semibold text-base leading-snug line-clamp-2 min-h-[2.5rem]">
+                <h3 className="font-semibold text-base sm:text-lg leading-snug line-clamp-2 min-h-[2.75rem]">
                   {product.name}
                 </h3>
                 {product.amountPerPackage && (
-                  <p className="text-xs text-slate-500">
+                  <p className="text-sm text-slate-500">
                     Paquete: {product.amountPerPackage}
                   </p>
                 )}
-                <p className="text-2xl font-bold text-amber-600">
+                <p className="text-2xl sm:text-3xl font-bold text-amber-600">
                   ${product.price.toFixed(2)}
                 </p>
-                <div className="flex gap-2">
-                  <Button onClick={() => addToCart(product)} className="flex-1">
-                    <ShoppingCart className="w-4 h-4 mr-2" />
+                <div className="flex gap-2 pt-0.5">
+                  <Button
+                    onClick={() => addToCart(product)}
+                    className="flex-1 text-sm sm:text-base h-10"
+                  >
+                    <ShoppingCart className="w-4 h-4 mr-1.5" />
                     Añadir
                   </Button>
                   <Button
                     variant="outline"
                     size="icon"
+                    className="h-10 w-10 shrink-0"
                     onClick={() => handleShare(product)}
                     title="Compartir"
                   >
@@ -705,6 +774,22 @@ export function SalesPanel() {
           <p>No se encontraron productos</p>
         </div>
       )}
+
+      {/* Floating cart button — always reachable, even after scrolling far down. */}
+      <button
+        type="button"
+        onClick={() => setCartOpen(true)}
+        aria-label="Ver carrito"
+        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-amber-500 text-slate-900 font-semibold shadow-xl ring-2 ring-amber-300/50 px-5 py-3.5 hover:bg-amber-400 active:scale-95 transition-all"
+      >
+        <ShoppingCart className="w-6 h-6" />
+        <span className="hidden sm:inline text-base">Carrito</span>
+        {totalItems > 0 && (
+          <span className="bg-slate-900 text-amber-400 font-bold rounded-full min-w-[24px] h-6 px-1.5 flex items-center justify-center text-sm">
+            {totalItems}
+          </span>
+        )}
+      </button>
     </div>
   );
 }
