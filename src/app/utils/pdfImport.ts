@@ -48,10 +48,16 @@ const IMG_HALF_ABOVE = 46; // PDF points above the row anchor
 const IMG_HALF_BELOW = 40; // PDF points below the row anchor
 
 // Column boundaries (left edge in PDF points), derived from the list layout.
+// The thresholds sit in the empty gaps between columns so a fragment is
+// classified by where it starts: category ≈48, code ≈63-80, product name
+// ≈135-270, EMP ≈300-330, image ≈407, price ≈519. Earlier thresholds of
+// 140 (code/name) and 305 (name/emp) were too tight — a name starting at
+// x≈139 fell into the code column and an EMP value at x≈304 fell into the
+// name — so they're widened into the actual gaps (110 and 290).
 function columnOf(x: number): 'cat' | 'code' | 'name' | 'emp' | 'img' | 'price' {
   if (x < 65) return 'cat';
-  if (x < 140) return 'code';
-  if (x < 305) return 'name';
+  if (x < 110) return 'code';
+  if (x < 290) return 'name';
   if (x < 405) return 'emp';
   if (x < 500) return 'img';
   return 'price';

@@ -32,7 +32,8 @@ type OutboxOp =
   | { kind: 'client.delete'; id: string }
   | { kind: 'product.create'; payload: any }
   | { kind: 'product.update'; code: string; payload: any }
-  | { kind: 'product.delete'; code: string };
+  | { kind: 'product.delete'; code: string }
+  | { kind: 'product.bulkDelete'; codes: string[] };
 
 const PRODUCTS_KEY = 'products';
 const CLIENTS_KEY = 'clients';
@@ -116,12 +117,14 @@ export async function saveClient(
         : [...cache, saved];
       await idbSet(CLIENTS_KEY, next);
       return saved;
-    } catch {
-      /* fall through to offline path */
+    } catch (e: any) {
+      // Only fall back to the offline queue on a real connectivity failure.
+      // Server-side rejections must surface to the caller, not be queued.
+      if (!e?.network) throw e;
     }
   }
 
-  // Offline / failed: optimistic local change + queue.
+  // Offline / network failure: optimistic local change + queue.
   if (existing) {
     const updated: Client = { ...existing, ...form, _pending: true };
     await idbSet(CLIENTS_KEY, cache.map((c) => (c.id === existing.id ? updated : c)));
@@ -150,8 +153,9 @@ export async function deleteClient(accessToken: string | null, id: string): Prom
     try {
       await apiFetch(`/clients/${id}`, { method: 'DELETE', accessToken });
       return;
-    } catch {
-      /* queue below */
+    } catch (e: any) {
+      // Surface server rejections; only queue genuine connectivity failures.
+      if (!e?.network) throw e;
     }
   }
   if (!id.startsWith('local-')) {
@@ -189,8 +193,9 @@ export async function saveProduct(
         : [...cache, normalized];
       await idbSet(PRODUCTS_KEY, next);
       return;
-    } catch {
-      /* fall through */
+    } catch (e: any) {
+      // Only queue on a real connectivity failure; surface server errors.
+      if (!e?.network) throw e;
     }
   }
 
@@ -254,11 +259,31 @@ export async function deleteProduct(accessToken: string | null, code: string): P
     try {
       await apiFetch(`/products/${code}`, { method: 'DELETE', accessToken });
       return;
-    } catch {
-      /* queue below */
+    } catch (e: any) {
+      // Surface server rejections; only queue genuine connectivity failures.
+      if (!e?.network) throw e;
     }
   }
   await enqueue({ kind: 'product.delete', code });
+}
+
+/** Deletes many products in a single request instead of one per code. */
+export async function deleteProducts(accessToken: string | null, codes: string[]): Promise<void> {
+  if (codes.length === 0) return;
+  const cache = (await idbGet<Product[]>(PRODUCTS_KEY)) || [];
+  const codeSet = new Set(codes);
+  await idbSet(PRODUCTS_KEY, cache.filter((p) => !codeSet.has(p.code)));
+
+  if (isOnline()) {
+    try {
+      await apiFetch('/products', { method: 'DELETE', accessToken, body: JSON.stringify({ codes }) });
+      return;
+    } catch (e: any) {
+      // Surface server rejections; only queue genuine connectivity failures.
+      if (!e?.network) throw e;
+    }
+  }
+  await enqueue({ kind: 'product.bulkDelete', codes });
 }
 
 // ---------- Sync ----------
@@ -287,6 +312,8 @@ export async function flushOutbox(accessToken: string | null): Promise<number> {
           return apiFetch(`/products/${op.code}`, { method: 'PUT', accessToken, body: JSON.stringify(op.payload) });
         case 'product.delete':
           return apiFetch(`/products/${op.code}`, { method: 'DELETE', accessToken });
+        case 'product.bulkDelete':
+          return apiFetch('/products', { method: 'DELETE', accessToken, body: JSON.stringify({ codes: op.codes }) });
       }
     };
 

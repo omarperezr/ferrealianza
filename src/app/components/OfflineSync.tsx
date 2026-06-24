@@ -16,6 +16,14 @@ export function OfflineSync() {
 
   const refreshPending = async () => setPending(await pendingCount());
 
+  // Periodic tick: refresh the pending count and auto-retry queued changes
+  // whenever we're online, so they sync on their own without a manual click.
+  const tick = async () => {
+    const n = await pendingCount();
+    setPending(n);
+    if (n > 0 && isOnline()) sync();
+  };
+
   const sync = async () => {
     if (!accessToken || !isOnline() || syncing) return;
     setSyncing(true);
@@ -45,7 +53,7 @@ export function OfflineSync() {
 
     window.addEventListener('online', goOnline);
     window.addEventListener('offline', goOffline);
-    const interval = setInterval(refreshPending, 5000);
+    const interval = setInterval(tick, 5000);
 
     return () => {
       window.removeEventListener('online', goOnline);

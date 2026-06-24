@@ -350,6 +350,107 @@ app.post("/make-server-745f9946/products", authMiddleware, adminMiddleware, asyn
   }
 });
 
+// Bulk create/update products (admin only), used by the Excel/PDF importers.
+// Reads all existing products once (by prefix) and writes the changed ones in
+// chunked upserts, instead of one create/update request per row.
+app.post("/make-server-745f9946/products/bulk", authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const { products } = await c.req.json();
+    if (!Array.isArray(products) || products.length === 0) {
+      return c.json({ error: 'Se requiere una lista de productos' }, 400);
+    }
+
+    // Dedupe by code (last one wins) since duplicate codes would collide on
+    // the same kv key during the upsert.
+    const byCode = new Map<string, any>();
+    for (const p of products) {
+      if (p?.code) byCode.set(String(p.code), p);
+    }
+    const rows = [...byCode.values()];
+
+    const supabase = getServiceClient();
+
+    // Read existing products with a single prefix query. We can't fetch by an
+    // exact key list here: PostgREST encodes `.in('key', [...])` into the
+    // request URL, and ~1500 keys overflow the URL length limit (500 error).
+    const { data: existingRows, error: fetchError } = await supabase
+      .from('kv_store_745f9946')
+      .select('key, value')
+      .like('key', 'product:%');
+    if (fetchError) throw new Error(fetchError.message);
+
+    const existingByKey = new Map((existingRows || []).map((r: any) => [r.key, r.value]));
+
+    const toUpsert: { key: string; value: any }[] = [];
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+
+    for (const row of rows) {
+      if (!row.code || !row.name || !row.category || !row.price) {
+        skipped++;
+        continue;
+      }
+
+      const key = `product:${row.code}`;
+      const existing = existingByKey.get(key);
+
+      const normalized = {
+        code: row.code,
+        name: row.name,
+        category: row.category,
+        amountPerPackage: row.amountPerPackage || '',
+        price: parseFloat(row.price),
+        // imageUrl/stock are only overwritten when the row actually provides
+        // them, so an import that omits them preserves the existing value.
+        imageUrl: row.imageUrl !== undefined ? row.imageUrl : (existing?.imageUrl || ''),
+        stock: row.stock !== undefined && row.stock !== ''
+          ? parseInt(row.stock, 10)
+          : (existing?.stock ?? 0),
+        hidden: existing?.hidden ?? false,
+        createdAt: existing?.createdAt || new Date().toISOString(),
+        ...(existing ? { updatedAt: new Date().toISOString() } : {}),
+      };
+
+      if (existing) {
+        const unchanged =
+          existing.name === normalized.name &&
+          existing.category === normalized.category &&
+          (existing.amountPerPackage || '') === normalized.amountPerPackage &&
+          Number(existing.price) === normalized.price &&
+          (row.stock === undefined || Number(existing.stock ?? 0) === normalized.stock) &&
+          (row.imageUrl === undefined || (existing.imageUrl || '') === normalized.imageUrl);
+
+        if (unchanged) {
+          skipped++;
+          continue;
+        }
+        updated++;
+      } else {
+        created++;
+      }
+
+      toUpsert.push({ key, value: normalized });
+    }
+
+    // Write in chunks so a very large import doesn't exceed payload/statement
+    // limits in a single upsert.
+    const CHUNK = 500;
+    for (let i = 0; i < toUpsert.length; i += CHUNK) {
+      const batch = toUpsert.slice(i, i + CHUNK);
+      const { error: upsertError } = await supabase
+        .from('kv_store_745f9946')
+        .upsert(batch.map(({ key, value }) => ({ key, value })));
+      if (upsertError) throw new Error(upsertError.message);
+    }
+
+    return c.json({ created, updated, skipped });
+  } catch (error) {
+    console.log(`Error al importar productos en lote: ${error}`);
+    return c.json({ error: 'Error al importar productos en lote' }, 500);
+  }
+});
+
 // Update product (admin only)
 app.put("/make-server-745f9946/products/:code{.+}", authMiddleware, adminMiddleware, async (c) => {
   try {
@@ -378,6 +479,30 @@ app.put("/make-server-745f9946/products/:code{.+}", authMiddleware, adminMiddlew
   } catch (error) {
     console.log(`Error al actualizar producto: ${error}`);
     return c.json({ error: 'Error al actualizar producto' }, 500);
+  }
+});
+
+// Bulk delete products (admin only). One round trip for any number of codes,
+// instead of the client looping a DELETE per product.
+app.delete("/make-server-745f9946/products", authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const { codes } = await c.req.json();
+    if (!Array.isArray(codes) || codes.length === 0) {
+      return c.json({ error: 'Se requiere una lista de códigos' }, 400);
+    }
+
+    // Delete in chunks: `kv.mdel` uses `.in('key', [...])`, which PostgREST
+    // encodes into the request URL, so deleting ~1500 keys at once overflows
+    // the URL length limit.
+    const keys = codes.map((code: string) => `product:${code}`);
+    const CHUNK = 500;
+    for (let i = 0; i < keys.length; i += CHUNK) {
+      await kv.mdel(keys.slice(i, i + CHUNK));
+    }
+    return c.json({ message: 'Productos eliminados exitosamente', count: codes.length });
+  } catch (error) {
+    console.log(`Error al eliminar productos en lote: ${error}`);
+    return c.json({ error: 'Error al eliminar productos en lote' }, 500);
   }
 });
 

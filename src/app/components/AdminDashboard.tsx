@@ -8,6 +8,7 @@ import {
   getCachedClients,
   saveProduct,
   deleteProduct,
+  deleteProducts,
   deleteClient,
   setProductHidden,
   isOnline,
@@ -262,23 +263,17 @@ export function AdminDashboard() {
 
     setBulkDeleting(true);
     const codes = [...selectedCodes];
-    let failed = 0;
-    for (const code of codes) {
-      try {
-        await deleteProduct(accessToken, code);
-      } catch {
-        failed++;
-      }
-    }
-    setBulkDeleting(false);
-    setDeleteMode(false);
-    setSelectedCodes(new Set());
-    if (failed) {
-      toast.error(`${codes.length - failed} eliminados, ${failed} con error`, { id: 'product-del' });
-    } else {
+    try {
+      await deleteProducts(accessToken, codes);
       toast.success(`${codes.length} producto(s) eliminado(s)`, { id: 'product-del' });
+    } catch (error: any) {
+      toast.error(error.message || 'Error al eliminar los productos', { id: 'product-del' });
+    } finally {
+      setBulkDeleting(false);
+      setDeleteMode(false);
+      setSelectedCodes(new Set());
+      loadProducts();
     }
-    loadProducts();
   };
 
   const handleEdit = (product: Product) => {
@@ -309,65 +304,20 @@ export function AdminDashboard() {
     setImageFile(null);
   };
 
-  // Shared create/update/skip pipeline used by both the Excel and PDF imports.
-  // `rows` are normalized product objects; existing products are updated only
-  // when a field changed, new ones are created, unchanged ones are skipped.
-  const bulkUpsertProducts = async (rows: any[]) => {
-    const { items: current } = await getProducts(accessToken);
-    const byCode = new Map(current.map((p) => [p.code, p]));
-
-    const isUnchanged = (row: any, existing: any) =>
-      existing.name === row.name &&
-      existing.category === row.category &&
-      (existing.amountPerPackage || '') === (row.amountPerPackage || '') &&
-      Number(existing.price) === Number(row.price) &&
-      // Only compare stock/image when the import actually provides them, so an
-      // import that omits them doesn't force a needless update.
-      (row.stock === undefined || Number(existing.stock ?? 0) === Number(row.stock)) &&
-      (row.imageUrl === undefined || (existing.imageUrl || '') === row.imageUrl);
-
-    const total = rows.length;
-    let done = 0;
-    let created = 0;
-    let updated = 0;
-    let skipped = 0;
-    const queue = [...rows];
-
-    // Import in parallel batches for speed (instead of one-by-one).
-    const worker = async () => {
-      while (queue.length) {
-        const row = queue.shift()!;
-        const existing = byCode.get(row.code);
-        try {
-          if (!existing) {
-            await apiFetch('/products', {
-              method: 'POST',
-              accessToken,
-              body: JSON.stringify(row),
-            });
-            created++;
-          } else if (isUnchanged(row, existing)) {
-            skipped++;
-          } else {
-            await apiFetch(`/products/${row.code}`, {
-              method: 'PUT',
-              accessToken,
-              body: JSON.stringify(row),
-            });
-            updated++;
-          }
-        } catch {
-          // Skip rows that fail and keep going.
-        }
-        done++;
-        if (done % 20 === 0 || done === total) {
-          toast.loading(`Importando ${done}/${total}...`, { id: 'import' });
-        }
-      }
-    };
-
-    await Promise.all(Array.from({ length: 6 }, worker));
-    return { created, updated, skipped };
+  // Shared create/update/skip pipeline used by both the Excel and PDF
+  // imports. Sends every row in a single request — the server does the
+  // create-vs-update-vs-skip diffing in one read + one upsert query, instead
+  // of the client looping one create/update request per row.
+  const bulkUpsertProducts = async (
+    rows: any[],
+  ): Promise<{ created: number; updated: number; skipped: number }> => {
+    toast.loading(`Importando ${rows.length} producto(s)...`, { id: 'import' });
+    const data = await apiFetch('/products/bulk', {
+      method: 'POST',
+      accessToken,
+      body: JSON.stringify({ products: rows }),
+    });
+    return { created: data.created || 0, updated: data.updated || 0, skipped: data.skipped || 0 };
   };
 
   const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -376,21 +326,61 @@ export function AdminDashboard() {
 
     setImporting(true);
     try {
-      const XLSX = await import('xlsx');
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
+      toast.loading('Leyendo Excel...', { id: 'import' });
+      const { parseProductsFromExcel } = await import('../utils/excelImport');
+      const parsed = await parseProductsFromExcel(file);
 
-      const products = jsonData.map((row) => ({
-        code: String(row.codigo ?? row.code ?? '').trim(),
-        name: String(row.nombre ?? row.name ?? '').trim(),
-        category: String(row.categoria ?? row.category ?? '').trim(),
-        amountPerPackage: String(row.cantidadPorPaquete ?? row.amountPerPackage ?? ''),
-        price: row.precio ?? row.price ?? 0,
-        stock: row.stock ?? row.cantidadDisponible ?? 0,
-        imageUrl: String(row.imageUrl ?? row.imagen ?? '').trim(),
-      })).filter((p) => p.code && p.name);
+      if (parsed.length === 0) {
+        toast.error('No se encontraron productos en el Excel', { id: 'import' });
+        return;
+      }
+
+      // Upload each distinct embedded image once (rows can share artwork),
+      // then map every product to its uploaded URL.
+      const uniqueImages = new Map<string, Blob>();
+      for (const p of parsed) {
+        if (p.image && !uniqueImages.has(p.image.mediaPath)) {
+          uniqueImages.set(p.image.mediaPath, p.image.blob);
+        }
+      }
+
+      const urlByMedia = new Map<string, string>();
+      if (uniqueImages.size > 0 && isOnline()) {
+        const entries = [...uniqueImages.entries()];
+        let uploaded = 0;
+        const queue = [...entries];
+        const uploadWorker = async () => {
+          while (queue.length) {
+            const [mediaPath, blob] = queue.shift()!;
+            try {
+              const body = new FormData();
+              const ext = mediaPath.split('.').pop() || 'png';
+              body.append('file', blob, `xlsx-image.${ext}`);
+              const res = await apiFetch('/upload-image', { method: 'POST', accessToken, body });
+              if (res?.imageUrl) urlByMedia.set(mediaPath, res.imageUrl);
+            } catch {
+              // Skip images that fail to upload; the product still imports.
+            }
+            uploaded++;
+            toast.loading(`Subiendo imágenes ${uploaded}/${entries.length}...`, { id: 'import' });
+          }
+        };
+        await Promise.all(Array.from({ length: 4 }, uploadWorker));
+      }
+
+      const products = parsed.map((p) => {
+        const imageUrl = p.image ? urlByMedia.get(p.image.mediaPath) : undefined;
+        return {
+          code: p.code,
+          name: p.name,
+          category: p.category,
+          amountPerPackage: p.amountPerPackage,
+          price: p.price,
+          // imageUrl is left undefined when the row had no picture, so the
+          // server preserves the existing image on update.
+          ...(imageUrl ? { imageUrl } : {}),
+        };
+      });
 
       const { created, updated, skipped } = await bulkUpsertProducts(products);
 
@@ -399,8 +389,8 @@ export function AdminDashboard() {
         { id: 'import' },
       );
       loadProducts();
-    } catch (error) {
-      toast.error('Error al importar productos desde Excel', { id: 'import' });
+    } catch (error: any) {
+      toast.error(error?.message || 'Error al importar productos desde Excel', { id: 'import' });
     } finally {
       setImporting(false);
       e.target.value = '';
@@ -497,6 +487,14 @@ export function AdminDashboard() {
 
   const tabBase =
     'flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors';
+
+  const visibleProducts = sortProducts(filterProducts(products, searchTerm), sortBy);
+  const allSelected =
+    visibleProducts.length > 0 && visibleProducts.every((p) => selectedCodes.has(p.code));
+
+  const toggleSelectAll = () => {
+    setSelectedCodes(allSelected ? new Set() : new Set(visibleProducts.map((p) => p.code)));
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -798,7 +796,11 @@ export function AdminDashboard() {
             </SelectContent>
           </Select>
           {deleteMode ? (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={toggleSelectAll} disabled={bulkDeleting}>
+                <CheckSquare className="w-4 h-4 mr-2" />
+                {allSelected ? 'Deseleccionar todos' : 'Seleccionar todos'}
+              </Button>
               <Button
                 variant="destructive"
                 onClick={handleBulkDelete}
@@ -825,7 +827,7 @@ export function AdminDashboard() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
-          {sortProducts(filterProducts(products, searchTerm), sortBy).map((product) => {
+          {visibleProducts.map((product) => {
             const selected = selectedCodes.has(product.code);
             return (
             <Card
