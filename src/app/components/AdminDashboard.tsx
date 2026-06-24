@@ -17,6 +17,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import {
   Plus,
@@ -30,6 +37,9 @@ import {
   FileText,
   EyeOff,
   UserCog,
+  Search,
+  CheckSquare,
+  X,
 } from 'lucide-react';
 import { Logo } from './Logo';
 import { ProfileButton } from './ProfileButton';
@@ -37,6 +47,12 @@ import { SalesPanel } from './SalesPanel';
 import { ClientFormDialog, Client } from './ClientFormDialog';
 import { ClientVendorsDialog } from './ClientVendorsDialog';
 import { UserManagement } from './UserManagement';
+import {
+  SORT_OPTIONS,
+  SortOption,
+  filterProducts,
+  sortProducts,
+} from '../utils/sortProducts';
 
 interface Product {
   code: string;
@@ -73,6 +89,12 @@ export function AdminDashboard() {
     stock: ''
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('name-asc');
+  // Bulk-delete mode: when active, product cards become selectable.
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Show cached data instantly, then refresh from the network. Re-runs when the
   // access token is ready so everything appears on first load (no manual refresh).
@@ -218,6 +240,45 @@ export function AdminDashboard() {
     } catch (error: any) {
       toast.error(error.message, { id: 'product-del' });
     }
+  };
+
+  const toggleDeleteMode = () => {
+    setDeleteMode((prev) => !prev);
+    setSelectedCodes(new Set());
+  };
+
+  const toggleSelected = (code: string) => {
+    setSelectedCodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedCodes.size === 0) return;
+    if (!confirm(`¿Eliminar ${selectedCodes.size} producto(s) seleccionado(s)?`)) return;
+
+    setBulkDeleting(true);
+    const codes = [...selectedCodes];
+    let failed = 0;
+    for (const code of codes) {
+      try {
+        await deleteProduct(accessToken, code);
+      } catch {
+        failed++;
+      }
+    }
+    setBulkDeleting(false);
+    setDeleteMode(false);
+    setSelectedCodes(new Set());
+    if (failed) {
+      toast.error(`${codes.length - failed} eliminados, ${failed} con error`, { id: 'product-del' });
+    } else {
+      toast.success(`${codes.length} producto(s) eliminado(s)`, { id: 'product-del' });
+    }
+    loadProducts();
   };
 
   const handleEdit = (product: Product) => {
@@ -713,10 +774,75 @@ export function AdminDashboard() {
           </Button>
         </div>
 
+        <div className="flex flex-col sm:flex-row gap-3 mb-6 sm:items-center">
+          <div className="relative w-full sm:max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <Input
+              type="search"
+              placeholder="Buscar por nombre, código o categoría..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder="Ordenar por" />
+            </SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {deleteMode ? (
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                onClick={handleBulkDelete}
+                disabled={selectedCodes.size === 0 || bulkDeleting}
+              >
+                {bulkDeleting ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4 mr-2" />
+                )}
+                Eliminar ({selectedCodes.size})
+              </Button>
+              <Button variant="outline" onClick={toggleDeleteMode} disabled={bulkDeleting}>
+                <X className="w-4 h-4 mr-2" />
+                Cancelar
+              </Button>
+            </div>
+          ) : (
+            <Button variant="outline" onClick={toggleDeleteMode}>
+              <CheckSquare className="w-4 h-4 mr-2" />
+              Eliminar varios
+            </Button>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
-          {products.map((product) => (
-            <Card key={product.code} className={`overflow-hidden border-slate-200 hover:shadow-lg transition-shadow p-0 gap-0 ${product.hidden ? 'opacity-70' : ''}`}>
+          {sortProducts(filterProducts(products, searchTerm), sortBy).map((product) => {
+            const selected = selectedCodes.has(product.code);
+            return (
+            <Card
+              key={product.code}
+              onClick={deleteMode ? () => toggleSelected(product.code) : undefined}
+              className={`overflow-hidden border-slate-200 hover:shadow-lg transition-shadow p-0 gap-0 ${product.hidden ? 'opacity-70' : ''} ${deleteMode ? 'cursor-pointer' : ''} ${selected ? 'ring-2 ring-red-500 border-red-500' : ''}`}
+            >
               <div className="relative h-28 sm:h-36 bg-slate-100 overflow-hidden">
+                {deleteMode && (
+                  <span
+                    className={`absolute top-2 left-2 z-10 h-6 w-6 rounded-md flex items-center justify-center border-2 ${
+                      selected ? 'bg-red-500 border-red-500 text-white' : 'bg-white/90 border-slate-300'
+                    }`}
+                  >
+                    {selected && <CheckSquare className="w-4 h-4" />}
+                  </span>
+                )}
                 {product.imageUrl ? (
                   <img
                     src={product.imageUrl}
@@ -759,7 +885,7 @@ export function AdminDashboard() {
                     <p className="text-sm text-slate-500">Paquete: {product.amountPerPackage}</p>
                   )}
                   <p className="text-2xl sm:text-3xl font-bold text-amber-600">${product.price.toFixed(2)}</p>
-                  <div className="flex gap-2 pt-1">
+                  <div className={`flex gap-2 pt-1 ${deleteMode ? 'pointer-events-none opacity-50' : ''}`}>
                     <Button
                       variant="outline"
                       size="sm"
@@ -779,7 +905,7 @@ export function AdminDashboard() {
                       Eliminar
                     </Button>
                   </div>
-                  <label className="flex items-center gap-2 pt-1 text-sm text-slate-600 cursor-pointer select-none">
+                  <label className={`flex items-center gap-2 pt-1 text-sm text-slate-600 cursor-pointer select-none ${deleteMode ? 'pointer-events-none opacity-50' : ''}`}>
                     <input
                       type="checkbox"
                       checked={!!product.hidden}
@@ -791,7 +917,8 @@ export function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
 
         {products.length === 0 && (

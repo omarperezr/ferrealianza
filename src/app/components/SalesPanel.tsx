@@ -41,6 +41,12 @@ import {
   Share2,
 } from "lucide-react";
 import logoImage from "../../imports/image.png";
+import {
+  SORT_OPTIONS,
+  SortOption,
+  filterProducts,
+  sortProducts,
+} from "../utils/sortProducts";
 
 const loadImageAsDataUrl = (src: string): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -113,6 +119,7 @@ export function SalesPanel() {
   const [discount, setDiscount] = useState(() => loadPersistedCart().discount);
   const [tax, setTax] = useState(() => loadPersistedCart().tax);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("name-asc");
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>(
     () => loadPersistedCart().selectedClientId,
@@ -483,11 +490,9 @@ export function SalesPanel() {
     toast.success("Archivo de texto generado exitosamente", { id: "export" });
   };
 
-  const filteredProducts = products.filter(
-    (product) =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredProducts = sortProducts(
+    filterProducts(products, searchTerm),
+    sortBy,
   );
 
   if (loading) {
@@ -502,15 +507,29 @@ export function SalesPanel() {
   return (
     <div>
       <div className="flex flex-col sm:flex-row gap-3 mb-6 sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-          <Input
-            type="search"
-            placeholder="Buscar por nombre, código o categoría..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:items-center sm:flex-1">
+          <div className="relative w-full sm:max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <Input
+              type="search"
+              placeholder="Buscar por nombre, código o categoría..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder="Ordenar por" />
+            </SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <Dialog open={cartOpen} onOpenChange={setCartOpen}>
