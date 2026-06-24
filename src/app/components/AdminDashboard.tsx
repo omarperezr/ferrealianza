@@ -248,6 +248,65 @@ export function AdminDashboard() {
     setImageFile(null);
   };
 
+  // Shared create/update/skip pipeline used by both the Excel and PDF imports.
+  // `rows` are normalized product objects; existing products are updated only
+  // when a field changed, new ones are created, unchanged ones are skipped.
+  const bulkUpsertProducts = async (rows: any[]) => {
+    const { items: current } = await getProducts(accessToken);
+    const byCode = new Map(current.map((p) => [p.code, p]));
+
+    const isUnchanged = (row: any, existing: any) =>
+      existing.name === row.name &&
+      existing.category === row.category &&
+      (existing.amountPerPackage || '') === (row.amountPerPackage || '') &&
+      Number(existing.price) === Number(row.price) &&
+      Number(existing.stock ?? 0) === Number(row.stock ?? 0) &&
+      (existing.imageUrl || '') === (row.imageUrl || '');
+
+    const total = rows.length;
+    let done = 0;
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    const queue = [...rows];
+
+    // Import in parallel batches for speed (instead of one-by-one).
+    const worker = async () => {
+      while (queue.length) {
+        const row = queue.shift()!;
+        const existing = byCode.get(row.code);
+        try {
+          if (!existing) {
+            await apiFetch('/products', {
+              method: 'POST',
+              accessToken,
+              body: JSON.stringify(row),
+            });
+            created++;
+          } else if (isUnchanged(row, existing)) {
+            skipped++;
+          } else {
+            await apiFetch(`/products/${row.code}`, {
+              method: 'PUT',
+              accessToken,
+              body: JSON.stringify(row),
+            });
+            updated++;
+          }
+        } catch {
+          // Skip rows that fail and keep going.
+        }
+        done++;
+        if (done % 20 === 0 || done === total) {
+          toast.loading(`Importando ${done}/${total}...`, { id: 'import' });
+        }
+      }
+    };
+
+    await Promise.all(Array.from({ length: 6 }, worker));
+    return { created, updated, skipped };
+  };
+
   const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -270,60 +329,7 @@ export function AdminDashboard() {
         imageUrl: String(row.imageUrl ?? row.imagen ?? '').trim(),
       })).filter((p) => p.code && p.name);
 
-      // Load current products to decide, per code, whether to create, update or skip.
-      const { items: current } = await getProducts(accessToken);
-      const byCode = new Map(current.map((p) => [p.code, p]));
-
-      // True when the spreadsheet row matches the stored product on every field.
-      const isUnchanged = (row: any, existing: any) =>
-        existing.name === row.name &&
-        existing.category === row.category &&
-        (existing.amountPerPackage || '') === row.amountPerPackage &&
-        Number(existing.price) === Number(row.price) &&
-        Number(existing.stock ?? 0) === Number(row.stock) &&
-        (existing.imageUrl || '') === row.imageUrl;
-
-      const total = products.length;
-      let done = 0;
-      let created = 0;
-      let updated = 0;
-      let skipped = 0;
-      const queue = [...products];
-
-      // Import in parallel batches for speed (instead of one-by-one).
-      const worker = async () => {
-        while (queue.length) {
-          const row = queue.shift()!;
-          const existing = byCode.get(row.code);
-          try {
-            if (!existing) {
-              await apiFetch('/products', {
-                method: 'POST',
-                accessToken,
-                body: JSON.stringify(row),
-              });
-              created++;
-            } else if (isUnchanged(row, existing)) {
-              skipped++;
-            } else {
-              await apiFetch(`/products/${row.code}`, {
-                method: 'PUT',
-                accessToken,
-                body: JSON.stringify(row),
-              });
-              updated++;
-            }
-          } catch {
-            // Skip rows that fail and keep going.
-          }
-          done++;
-          if (done % 20 === 0 || done === total) {
-            toast.loading(`Importando ${done}/${total}...`, { id: 'import' });
-          }
-        }
-      };
-
-      await Promise.all(Array.from({ length: 6 }, worker));
+      const { created, updated, skipped } = await bulkUpsertProducts(products);
 
       toast.success(
         `Importación lista: ${created} creados, ${updated} actualizados, ${skipped} sin cambios`,
@@ -332,6 +338,48 @@ export function AdminDashboard() {
       loadProducts();
     } catch (error) {
       toast.error('Error al importar productos desde Excel', { id: 'import' });
+    } finally {
+      setImporting(false);
+      e.target.value = '';
+    }
+  };
+
+  const handlePdfImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      toast.loading('Leyendo PDF...', { id: 'import' });
+      const { parseProductsFromPdf } = await import('../utils/pdfImport');
+      const parsed = await parseProductsFromPdf(file, (page, totalPages) => {
+        toast.loading(`Leyendo PDF: página ${page}/${totalPages}...`, { id: 'import' });
+      });
+
+      if (parsed.length === 0) {
+        toast.error('No se encontraron productos en el PDF', { id: 'import' });
+        return;
+      }
+
+      const products = parsed.map((p) => ({
+        code: p.code,
+        name: p.name,
+        category: p.category,
+        amountPerPackage: p.amountPerPackage,
+        price: p.price,
+        stock: 0,
+        imageUrl: '',
+      }));
+
+      const { created, updated, skipped } = await bulkUpsertProducts(products);
+
+      toast.success(
+        `PDF importado: ${created} creados, ${updated} actualizados, ${skipped} sin cambios`,
+        { id: 'import' },
+      );
+      loadProducts();
+    } catch (error: any) {
+      toast.error(error?.message || 'Error al importar productos desde PDF', { id: 'import' });
     } finally {
       setImporting(false);
       e.target.value = '';
@@ -602,6 +650,24 @@ export function AdminDashboard() {
                 accept=".xlsx,.xls"
                 className="hidden"
                 onChange={handleExcelImport}
+                disabled={importing}
+              />
+            </label>
+          </Button>
+
+          <Button variant="outline" asChild disabled={importing}>
+            <label className="cursor-pointer">
+              {importing ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <FileText className="w-4 h-4 mr-2" />
+              )}
+              {importing ? 'Importando...' : 'Importar de PDF'}
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                className="hidden"
+                onChange={handlePdfImport}
                 disabled={importing}
               />
             </label>
