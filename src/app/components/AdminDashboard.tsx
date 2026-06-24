@@ -18,13 +18,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { toast } from 'sonner';
 import {
   Plus,
@@ -49,11 +42,11 @@ import { ClientFormDialog, Client } from './ClientFormDialog';
 import { ClientVendorsDialog } from './ClientVendorsDialog';
 import { UserManagement } from './UserManagement';
 import {
-  SORT_OPTIONS,
   SortOption,
   filterProducts,
   sortProducts,
 } from '../utils/sortProducts';
+import { ProductSortControl } from './ProductSortControl';
 
 interface Product {
   code: string;
@@ -91,7 +84,7 @@ export function AdminDashboard() {
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<SortOption>('name-asc');
+  const [sortBy, setSortBy] = useState<SortOption[]>(['name-asc']);
   // Bulk-delete mode: when active, product cards become selectable.
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
@@ -783,18 +776,7 @@ export function AdminDashboard() {
               className="pl-9"
             />
           </div>
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-            <SelectTrigger className="w-full sm:w-56">
-              <SelectValue placeholder="Ordenar por" />
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ProductSortControl value={sortBy} onChange={setSortBy} className="w-full sm:w-auto" />
           {deleteMode ? (
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={toggleSelectAll} disabled={bulkDeleting}>

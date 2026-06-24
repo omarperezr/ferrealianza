@@ -42,11 +42,11 @@ import {
 } from "lucide-react";
 import logoImage from "../../imports/image.png";
 import {
-  SORT_OPTIONS,
   SortOption,
   filterProducts,
   sortProducts,
 } from "../utils/sortProducts";
+import { ProductSortControl } from "./ProductSortControl";
 
 const loadImageAsDataUrl = (src: string): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -119,7 +119,7 @@ export function SalesPanel() {
   const [discount, setDiscount] = useState(() => loadPersistedCart().discount);
   const [tax, setTax] = useState(() => loadPersistedCart().tax);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>("name-asc");
+  const [sortBy, setSortBy] = useState<SortOption[]>(["name-asc"]);
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>(
     () => loadPersistedCart().selectedClientId,
@@ -518,18 +518,7 @@ export function SalesPanel() {
               className="pl-9"
             />
           </div>
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-            <SelectTrigger className="w-full sm:w-56">
-              <SelectValue placeholder="Ordenar por" />
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ProductSortControl value={sortBy} onChange={setSortBy} className="w-full sm:w-auto" />
         </div>
 
         <Dialog open={cartOpen} onOpenChange={setCartOpen}>
