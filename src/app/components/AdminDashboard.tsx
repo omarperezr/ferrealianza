@@ -260,8 +260,10 @@ export function AdminDashboard() {
       existing.category === row.category &&
       (existing.amountPerPackage || '') === (row.amountPerPackage || '') &&
       Number(existing.price) === Number(row.price) &&
-      Number(existing.stock ?? 0) === Number(row.stock ?? 0) &&
-      (existing.imageUrl || '') === (row.imageUrl || '');
+      // Only compare stock/image when the import actually provides them, so an
+      // import that omits them doesn't force a needless update.
+      (row.stock === undefined || Number(existing.stock ?? 0) === Number(row.stock)) &&
+      (row.imageUrl === undefined || (existing.imageUrl || '') === row.imageUrl);
 
     const total = rows.length;
     let done = 0;
@@ -361,15 +363,52 @@ export function AdminDashboard() {
         return;
       }
 
-      const products = parsed.map((p) => ({
-        code: p.code,
-        name: p.name,
-        category: p.category,
-        amountPerPackage: p.amountPerPackage,
-        price: p.price,
-        stock: 0,
-        imageUrl: '',
-      }));
+      // Upload each distinct image once (the same picture is often reused across
+      // rows), then map every product to its uploaded URL.
+      const uniqueImages = new Map<string, Blob>();
+      for (const p of parsed) {
+        if (p.image && !uniqueImages.has(p.image.hash)) {
+          uniqueImages.set(p.image.hash, p.image.blob);
+        }
+      }
+
+      const urlByHash = new Map<string, string>();
+      if (uniqueImages.size > 0 && isOnline()) {
+        const entries = [...uniqueImages.entries()];
+        let uploaded = 0;
+        const queue = [...entries];
+        const uploadWorker = async () => {
+          while (queue.length) {
+            const [hash, blob] = queue.shift()!;
+            try {
+              const body = new FormData();
+              body.append('file', blob, `${hash}.jpg`);
+              const data = await apiFetch('/upload-image', { method: 'POST', accessToken, body });
+              if (data?.imageUrl) urlByHash.set(hash, data.imageUrl);
+            } catch {
+              // Skip images that fail to upload; the product still imports.
+            }
+            uploaded++;
+            toast.loading(`Subiendo imágenes ${uploaded}/${entries.length}...`, { id: 'import' });
+          }
+        };
+        await Promise.all(Array.from({ length: 4 }, uploadWorker));
+      }
+
+      const products = parsed.map((p) => {
+        const imageUrl = p.image ? urlByHash.get(p.image.hash) : undefined;
+        return {
+          code: p.code,
+          name: p.name,
+          category: p.category,
+          amountPerPackage: p.amountPerPackage,
+          price: p.price,
+          // stock and imageUrl are left undefined when not provided, so the
+          // server preserves the existing values on update (and defaults them
+          // for new products).
+          ...(imageUrl ? { imageUrl } : {}),
+        };
+      });
 
       const { created, updated, skipped } = await bulkUpsertProducts(products);
 
