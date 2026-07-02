@@ -1,7 +1,7 @@
-# Sistema de Gestión de Inventario - Ferre Alianza
+# Sistema de Gestión de Inventario - FerreAlianza
 
 ## Descripción
-Sistema completo de gestión de inventario y pedidos para Ferre Alianza con las siguientes funcionalidades:
+Sistema completo de gestión de inventario y pedidos para FerreAlianza con las siguientes funcionalidades:
 
 ### Funciones para Administradores:
 - ✅ Crear, editar y eliminar productos manualmente
@@ -134,4 +134,4 @@ Si encuentras algún problema:
 
 ---
 
-**Desarrollado para Ferre Alianza Import, C.A.**
+**Desarrollado para FerreAlianza Import, C.A.**

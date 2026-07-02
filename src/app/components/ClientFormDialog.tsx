@@ -25,7 +25,7 @@ interface ClientFormDialogProps {
   trigger?: ReactNode;
 }
 
-const empty = { name: '', rif: '', address: '' };
+const empty = { name: '', rif: '', address: '', email: '', phone: '' };
 
 export function ClientFormDialog({
   accessToken,
@@ -41,7 +41,17 @@ export function ClientFormDialog({
 
   useEffect(() => {
     if (open) {
-      setForm(client ? { name: client.name, rif: client.rif, address: client.address } : empty);
+      setForm(
+        client
+          ? {
+              name: client.name,
+              rif: client.rif,
+              address: client.address,
+              email: client.email || '',
+              phone: client.phone || '',
+            }
+          : empty,
+      );
     }
   }, [open, client]);
 
@@ -96,6 +106,24 @@ export function ClientFormDialog({
             <Input
               value={form.address}
               onChange={(e) => setForm({ ...form, address: e.target.value })}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Correo electrónico</Label>
+            <Input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Teléfono</Label>
+            <Input
+              type="tel"
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
               required
             />
           </div>

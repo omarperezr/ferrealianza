@@ -18,6 +18,8 @@ export interface Client {
   name: string;
   rif: string;
   address: string;
+  email: string;
+  phone: string;
   vendorId: string;
   vendorName: string;
   vendorIds?: string[];
@@ -97,9 +99,26 @@ export async function getClients(
 
 // ---------- Client writes (offline-aware) ----------
 
+export async function deleteClients(accessToken: string | null, ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const cache = (await idbGet<Client[]>(CLIENTS_KEY)) || [];
+  const idSet = new Set(ids);
+  await idbSet(CLIENTS_KEY, cache.filter((c) => !idSet.has(c.id)));
+
+  const serverIds = ids.filter((id) => !id.startsWith('local-'));
+  if (isOnline() && serverIds.length > 0) {
+    try {
+      await apiFetch('/clients', { method: 'DELETE', accessToken, body: JSON.stringify({ ids: serverIds }) });
+      return;
+    } catch (e: any) {
+      if (!e?.network) throw e;
+    }
+  }
+}
+
 export async function saveClient(
   accessToken: string | null,
-  form: { name: string; rif: string; address: string },
+  form: { name: string; rif: string; address: string; email: string; phone: string },
   existing?: Client | null,
 ): Promise<Client> {
   const cache = (await idbGet<Client[]>(CLIENTS_KEY)) || [];
@@ -134,7 +153,11 @@ export async function saveClient(
   const tempId = `local-${Date.now()}`;
   const temp: Client = {
     id: tempId,
-    ...form,
+    name: form.name,
+    rif: form.rif,
+    address: form.address,
+    email: form.email,
+    phone: form.phone,
     vendorId: 'local',
     vendorName: '(pendiente de sincronizar)',
     createdAt: new Date().toISOString(),

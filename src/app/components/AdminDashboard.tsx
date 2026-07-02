@@ -10,6 +10,7 @@ import {
   deleteProduct,
   deleteProducts,
   deleteClient,
+  deleteClients,
   setProductHidden,
   isOnline,
 } from '../utils/dataStore';
@@ -90,6 +91,12 @@ export function AdminDashboard() {
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
+  // Client bulk-delete
+  const [clientDeleteMode, setClientDeleteMode] = useState(false);
+  const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
+  const [clientBulkDeleting, setClientBulkDeleting] = useState(false);
+  const [importingClients, setImportingClients] = useState(false);
+
   // Show cached data instantly, then refresh from the network. Re-runs when the
   // access token is ready so everything appears on first load (no manual refresh).
   useEffect(() => {
@@ -148,6 +155,114 @@ export function AdminDashboard() {
       loadClients();
     } catch (error: any) {
       toast.error(error.message || 'Error al eliminar el cliente', { id: 'client-del' });
+    }
+  };
+
+  const toggleClientDeleteMode = () => {
+    setClientDeleteMode((prev) => !prev);
+    setSelectedClientIds(new Set());
+  };
+
+  const toggleClientSelected = (id: string) => {
+    setSelectedClientIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleClientBulkDelete = async () => {
+    if (selectedClientIds.size === 0) return;
+    if (!confirm(`¿Eliminar ${selectedClientIds.size} cliente(s) seleccionado(s)?`)) return;
+    setClientBulkDeleting(true);
+    const ids = [...selectedClientIds];
+    try {
+      await deleteClients(accessToken, ids);
+      toast.success(`${ids.length} cliente(s) eliminado(s)`, { id: 'client-del' });
+    } catch (error: any) {
+      toast.error(error.message || 'Error al eliminar los clientes', { id: 'client-del' });
+    } finally {
+      setClientBulkDeleting(false);
+      setClientDeleteMode(false);
+      setSelectedClientIds(new Set());
+      loadClients();
+    }
+  };
+
+  const handleClientExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportingClients(true);
+    try {
+      toast.loading('Leyendo Excel de clientes...', { id: 'import-clients' });
+      const XLSX = await import('xlsx');
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
+
+      // Find header row: look for a row containing 'Rif' or 'RIF' or 'rif'
+      let headerIdx = -1;
+      let headers: string[] = [];
+      for (let i = 0; i < Math.min(rows.length, 5); i++) {
+        const row = rows[i].map((v: any) => String(v || '').trim());
+        if (row.some((h) => /rif/i.test(h))) {
+          headerIdx = i;
+          headers = row;
+          break;
+        }
+      }
+
+      if (headerIdx === -1) {
+        toast.error('No se encontró fila de encabezados con columna RIF', { id: 'import-clients' });
+        return;
+      }
+
+      const col = (name: RegExp) => headers.findIndex((h) => name.test(h));
+      const iName = col(/empresa|razon|nombre/i);
+      const iRif = col(/rif/i);
+      const iAddress = col(/direcci/i);
+      const iPhone = col(/tel[eé]fono|tel\./i);
+      const iEmail = col(/correo|email/i);
+
+      const clients: any[] = [];
+      for (let i = headerIdx + 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.every((v: any) => !v)) continue;
+        const name = String(row[iName] || '').trim();
+        const rif = String(row[iRif] || '').trim();
+        if (!name || !rif) continue;
+        clients.push({
+          name,
+          rif,
+          address: iAddress >= 0 ? String(row[iAddress] || '').trim() : '',
+          phone: iPhone >= 0 ? String(row[iPhone] || '').trim() : '',
+          email: iEmail >= 0 ? String(row[iEmail] || '').trim() : '',
+        });
+      }
+
+      if (clients.length === 0) {
+        toast.error('No se encontraron clientes válidos en el Excel', { id: 'import-clients' });
+        return;
+      }
+
+      toast.loading(`Importando ${clients.length} cliente(s)...`, { id: 'import-clients' });
+      const result = await apiFetch('/clients/bulk', {
+        method: 'POST',
+        accessToken,
+        body: JSON.stringify({ clients }),
+      });
+      toast.success(
+        `Importación lista: ${result.created} creados, ${result.updated} actualizados, ${result.skipped} omitidos`,
+        { id: 'import-clients' },
+      );
+      loadClients();
+    } catch (error: any) {
+      toast.error(error?.message || 'Error al importar clientes', { id: 'import-clients' });
+    } finally {
+      setImportingClients(false);
+      e.target.value = '';
     }
   };
 
@@ -557,34 +672,94 @@ export function AdminDashboard() {
 
         {view === 'clients' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold text-slate-800">Clientes Registrados</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold text-slate-800 mr-auto">Clientes Registrados</h2>
               <Button onClick={openNewClient}>
                 <Plus className="w-4 h-4 mr-2" />
                 Nuevo Cliente
               </Button>
+              <Button variant="outline" asChild disabled={importingClients}>
+                <label className="cursor-pointer">
+                  {importingClients ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  )}
+                  {importingClients ? 'Importando...' : 'Importar clientes de excel'}
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    className="hidden"
+                    onChange={handleClientExcelImport}
+                    disabled={importingClients}
+                  />
+                </label>
+              </Button>
+              {clientDeleteMode ? (
+                <>
+                  <Button
+                    variant="destructive"
+                    onClick={handleClientBulkDelete}
+                    disabled={selectedClientIds.size === 0 || clientBulkDeleting}
+                  >
+                    {clientBulkDeleting ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4 mr-2" />
+                    )}
+                    Eliminar ({selectedClientIds.size})
+                  </Button>
+                  <Button variant="outline" onClick={toggleClientDeleteMode} disabled={clientBulkDeleting}>
+                    <X className="w-4 h-4 mr-2" />
+                    Cancelar
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" onClick={toggleClientDeleteMode}>
+                  <CheckSquare className="w-4 h-4 mr-2" />
+                  Eliminar varios
+                </Button>
+              )}
             </div>
             <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left bg-slate-50 text-slate-600">
+                    {clientDeleteMode && <th className="p-3 w-10"></th>}
                     <th className="p-3 font-semibold">Nombre</th>
                     <th className="p-3 font-semibold">RIF</th>
+                    <th className="p-3 font-semibold">Teléfono</th>
+                    <th className="p-3 font-semibold">Correo</th>
                     <th className="p-3 font-semibold">Dirección</th>
                     <th className="p-3 font-semibold">Vendedores</th>
                     <th className="p-3 font-semibold text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {clients.map((client) => (
-                    <tr key={client.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                  {clients.map((client) => {
+                    const selected = selectedClientIds.has(client.id);
+                    return (
+                    <tr
+                      key={client.id}
+                      onClick={clientDeleteMode ? () => toggleClientSelected(client.id) : undefined}
+                      className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 ${clientDeleteMode ? 'cursor-pointer' : ''} ${selected ? 'bg-red-50' : ''}`}
+                    >
+                      {clientDeleteMode && (
+                        <td className="p-3">
+                          <span className={`inline-flex h-5 w-5 rounded border-2 items-center justify-center ${selected ? 'bg-red-500 border-red-500 text-white' : 'border-slate-300'}`}>
+                            {selected && <CheckSquare className="w-3 h-3" />}
+                          </span>
+                        </td>
+                      )}
                       <td className="p-3 font-medium">{client.name}</td>
                       <td className="p-3 text-slate-600">{client.rif}</td>
+                      <td className="p-3 text-slate-600">{client.phone || '—'}</td>
+                      <td className="p-3 text-slate-600">{client.email || '—'}</td>
                       <td className="p-3 text-slate-600">{client.address}</td>
                       <td className="p-3 text-slate-600">
                         <button
                           type="button"
-                          onClick={() => openVendorsDialog(client)}
+                          onClick={(e) => { e.stopPropagation(); openVendorsDialog(client); }}
                           className="inline-flex items-center gap-1.5 text-amber-700 hover:text-amber-800 hover:underline"
                         >
                           <UserCog className="w-4 h-4" />
@@ -592,11 +767,11 @@ export function AdminDashboard() {
                         </button>
                       </td>
                       <td className="p-3">
-                        <div className="flex justify-end gap-2">
+                        <div className={`flex justify-end gap-2 ${clientDeleteMode ? 'pointer-events-none opacity-40' : ''}`}>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => openEditClient(client)}
+                            onClick={(e) => { e.stopPropagation(); openEditClient(client); }}
                           >
                             <Pencil className="w-4 h-4" />
                           </Button>
@@ -604,14 +779,15 @@ export function AdminDashboard() {
                             variant="ghost"
                             size="sm"
                             className="text-red-500 hover:text-red-700"
-                            onClick={() => handleDeleteClient(client)}
+                            onClick={(e) => { e.stopPropagation(); handleDeleteClient(client); }}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
               {clients.length === 0 && (

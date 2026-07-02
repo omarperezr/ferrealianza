@@ -125,6 +125,8 @@ export function SalesPanel() {
     () => loadPersistedCart().selectedClientId,
   );
   const [clientDialogOpen, setClientDialogOpen] = useState(false);
+  // Per-product quantity input (product catalog cards)
+  const [productQty, setProductQty] = useState<Record<string, number>>({});
 
   // Show cached data instantly, then refresh from the network. Re-runs when the
   // access token becomes available so the catalog appears on first load without
@@ -197,19 +199,19 @@ export function SalesPanel() {
 
   const selectedClient = clients.find((c) => c.id === selectedClientId) || null;
 
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, qty = 1) => {
+    const amount = Math.max(1, qty);
     setCart((prev) => {
       const existing = prev.find((item) => item.code === product.code);
       if (existing) {
         return prev.map((item) =>
           item.code === product.code
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + amount }
             : item,
         );
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prev, { ...product, quantity: amount }];
     });
-    // Reuse a single toast id so rapid adds update one notification.
     toast.success(`${product.name} agregado al carrito`, { id: "cart-add" });
   };
 
@@ -223,6 +225,11 @@ export function SalesPanel() {
         )
         .filter((item) => item.quantity > 0),
     );
+  };
+
+  const setQuantity = (code: string, value: number) => {
+    const qty = Math.max(1, Math.floor(value) || 1);
+    setCart((prev) => prev.map((item) => item.code === code ? { ...item, quantity: qty } : item));
   };
 
   const removeFromCart = (code: string) => {
@@ -393,7 +400,7 @@ export function SalesPanel() {
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
     doc.text(
-      "Gracias por su preferencia · Ferre Alianza Import, C.A.",
+      "Gracias por su preferencia · FerreAlianza Import, C.A.",
       pageW / 2,
       pageH - 10,
       { align: "center" },
@@ -609,9 +616,13 @@ export function SalesPanel() {
                       >
                         <Minus className="w-4 h-4" />
                       </Button>
-                      <span className="w-10 text-center font-semibold">
-                        {item.quantity}
-                      </span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => setQuantity(item.code, parseInt(e.target.value) || 1)}
+                        className="w-12 text-center font-semibold border border-slate-200 rounded-md h-8 outline-none focus:ring-2 focus:ring-amber-400 text-sm"
+                      />
                       <Button
                         size="icon"
                         variant="outline"
@@ -752,18 +763,41 @@ export function SalesPanel() {
                 <p className="text-2xl sm:text-3xl font-bold text-amber-600">
                   ${product.price.toFixed(2)}
                 </p>
-                <div className="flex gap-2 pt-0.5">
+                <div className="flex gap-1.5 pt-0.5 items-center">
+                  <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">
+                    <button
+                      type="button"
+                      className="px-2 py-1.5 text-slate-600 hover:bg-slate-100 transition-colors"
+                      onClick={() => setProductQty((q) => ({ ...q, [product.code]: Math.max(1, (q[product.code] || 1) - 1) }))}
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      value={productQty[product.code] || 1}
+                      onChange={(e) => setProductQty((q) => ({ ...q, [product.code]: Math.max(1, parseInt(e.target.value) || 1) }))}
+                      className="w-10 text-center text-sm font-semibold bg-transparent outline-none py-1"
+                    />
+                    <button
+                      type="button"
+                      className="px-2 py-1.5 text-slate-600 hover:bg-slate-100 transition-colors"
+                      onClick={() => setProductQty((q) => ({ ...q, [product.code]: (q[product.code] || 1) + 1 }))}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                   <Button
-                    onClick={() => addToCart(product)}
-                    className="flex-1 text-sm sm:text-base h-10"
+                    onClick={() => addToCart(product, productQty[product.code] || 1)}
+                    className="flex-1 text-sm h-9"
                   >
-                    <ShoppingCart className="w-4 h-4 mr-1.5" />
+                    <ShoppingCart className="w-4 h-4 mr-1" />
                     Añadir
                   </Button>
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-10 w-10 shrink-0"
+                    className="h-9 w-9 shrink-0"
                     onClick={() => handleShare(product)}
                     title="Compartir"
                   >

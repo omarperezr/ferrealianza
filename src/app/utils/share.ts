@@ -17,7 +17,7 @@ function buildProductText(product: ShareableProduct): string {
     product.amountPerPackage ? `Paquete: ${product.amountPerPackage}` : '',
     `Precio: $${Number(product.price).toFixed(2)}`,
     '',
-    'Ferre Alianza Import, C.A.',
+    'FerreAlianza Import, C.A.',
   ];
   return lines.filter(Boolean).join('\n');
 }

@@ -4,7 +4,7 @@ export function Logo({ className = "h-12" }: { className?: string }) {
   return (
     <img
       src={logoImage}
-      alt="Ferre Alianza"
+      alt="FerreAlianza"
       className={className}
     />
   );

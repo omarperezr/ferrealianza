@@ -602,10 +602,10 @@ app.post("/make-server-745f9946/clients", authMiddleware, async (c) => {
     if ((user.user_metadata?.role || 'user') !== 'admin') {
       return c.json({ error: 'Solo un administrador puede crear clientes' }, 403);
     }
-    const { name, rif, address, vendorIds, allVendors } = await c.req.json();
+    const { name, rif, address, email, phone, vendorIds, allVendors } = await c.req.json();
 
-    if (!name || !rif || !address) {
-      return c.json({ error: 'Nombre, RIF y dirección son requeridos' }, 400);
+    if (!name || !rif || !address || !email || !phone) {
+      return c.json({ error: 'Nombre, RIF, dirección, correo y teléfono son requeridos' }, 400);
     }
 
     const id = `${Date.now()}-${user.id}`;
@@ -614,6 +614,8 @@ app.post("/make-server-745f9946/clients", authMiddleware, async (c) => {
       name,
       rif,
       address,
+      email,
+      phone,
       vendorId: user.id,
       vendorName: user.user_metadata?.name || user.email,
       vendorIds: Array.isArray(vendorIds) ? vendorIds : [],
@@ -626,6 +628,106 @@ app.post("/make-server-745f9946/clients", authMiddleware, async (c) => {
   } catch (error) {
     console.log(`Error al crear cliente: ${error}`);
     return c.json({ error: 'Error al crear cliente' }, 500);
+  }
+});
+
+// Bulk import clients (admin only) — upsert by RIF, skip rows missing name or rif
+app.post("/make-server-745f9946/clients/bulk", authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const user = c.get('user');
+    const { clients } = await c.req.json();
+    if (!Array.isArray(clients) || clients.length === 0) {
+      return c.json({ error: 'Se requiere una lista de clientes' }, 400);
+    }
+
+    const supabase = getServiceClient();
+
+    const { data: existingRows, error: fetchError } = await supabase
+      .from('kv_store_745f9946')
+      .select('key, value')
+      .like('key', 'client:%');
+    if (fetchError) throw new Error(fetchError.message);
+
+    const existingByRif = new Map<string, any>();
+    for (const row of (existingRows || [])) {
+      if (row.value?.rif) existingByRif.set(String(row.value.rif).trim().toUpperCase(), row.value);
+    }
+
+    const toUpsert: { key: string; value: any }[] = [];
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+
+    for (const row of clients) {
+      if (!row.name || !row.rif) { skipped++; continue; }
+      const rifKey = String(row.rif).trim().toUpperCase();
+      const existing = existingByRif.get(rifKey);
+
+      if (existing) {
+        const normalized = {
+          ...existing,
+          name: row.name,
+          rif: row.rif,
+          address: row.address || existing.address || '',
+          email: row.email || existing.email || '',
+          phone: row.phone || existing.phone || '',
+          updatedAt: new Date().toISOString(),
+        };
+        toUpsert.push({ key: `client:${existing.id}`, value: normalized });
+        updated++;
+      } else {
+        const id = `${Date.now()}-import-${Math.random().toString(36).slice(2)}`;
+        const normalized = {
+          id,
+          name: row.name,
+          rif: row.rif,
+          address: row.address || '',
+          email: row.email || '',
+          phone: row.phone || '',
+          vendorId: user.id,
+          vendorName: user.user_metadata?.name || user.email,
+          vendorIds: [],
+          allVendors: true,
+          createdAt: new Date().toISOString(),
+        };
+        toUpsert.push({ key: `client:${id}`, value: normalized });
+        created++;
+      }
+    }
+
+    const CHUNK = 500;
+    for (let i = 0; i < toUpsert.length; i += CHUNK) {
+      const batch = toUpsert.slice(i, i + CHUNK);
+      const { error: upsertError } = await supabase
+        .from('kv_store_745f9946')
+        .upsert(batch.map(({ key, value }) => ({ key, value })));
+      if (upsertError) throw new Error(upsertError.message);
+    }
+
+    return c.json({ created, updated, skipped });
+  } catch (error) {
+    console.log(`Error al importar clientes en lote: ${error}`);
+    return c.json({ error: 'Error al importar clientes en lote' }, 500);
+  }
+});
+
+// Bulk delete clients (admin only)
+app.delete("/make-server-745f9946/clients", authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const { ids } = await c.req.json();
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return c.json({ error: 'Se requiere una lista de IDs' }, 400);
+    }
+
+    const keys = ids.map((id: string) => `client:${id}`);
+    const CHUNK = 500;
+    for (let i = 0; i < keys.length; i += CHUNK) {
+      await kv.mdel(keys.slice(i, i + CHUNK));
+    }
+    return c.json({ message: 'Clientes eliminados exitosamente', count: ids.length });
+  } catch (error) {
+    console.log(`Error al eliminar clientes en lote: ${error}`);
+    return c.json({ error: 'Error al eliminar clientes en lote' }, 500);
   }
 });
 
@@ -670,6 +772,8 @@ app.put("/make-server-745f9946/clients/:id", authMiddleware, async (c) => {
       name: updates.name ?? existing.name,
       rif: updates.rif ?? existing.rif,
       address: updates.address ?? existing.address,
+      email: updates.email ?? existing.email ?? '',
+      phone: updates.phone ?? existing.phone ?? '',
       // Vendor associations can only be changed by an admin.
       vendorIds: userRole === 'admin' && updates.vendorIds !== undefined
         ? (Array.isArray(updates.vendorIds) ? updates.vendorIds : [])

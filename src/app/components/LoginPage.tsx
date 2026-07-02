@@ -57,7 +57,7 @@ export function LoginPage() {
             {isLogin ? 'Bienvenido de nuevo' : 'Crear cuenta'}
           </CardTitle>
           <CardDescription className="text-center">
-            Sistema de Gestión · Ferre Alianza Import, C.A.
+            Sistema de Gestión · FerreAlianza Import, C.A.
           </CardDescription>
         </CardHeader>
         <CardContent>
