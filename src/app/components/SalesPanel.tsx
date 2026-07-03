@@ -19,13 +19,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   ShoppingCart,
@@ -39,6 +32,7 @@ import {
   Package,
   UserPlus,
   Share2,
+  ChevronDown,
 } from "lucide-react";
 import logoImage from "../../imports/image.png";
 import {
@@ -46,6 +40,14 @@ import {
   filterProducts,
   sortProducts,
 } from "../utils/sortProducts";
+import {
+  filterClients,
+  sortClients,
+  EMPTY_CLIENT_FILTERS,
+  ClientSortOption,
+  ClientFilters,
+} from "../utils/sortClients";
+import { ClientSortControl, ClientFilterControl } from "./ClientControls";
 import { ProductSortControl } from "./ProductSortControl";
 
 const loadImageAsDataUrl = (src: string): Promise<string> =>
@@ -125,6 +127,10 @@ export function SalesPanel() {
     () => loadPersistedCart().selectedClientId,
   );
   const [clientDialogOpen, setClientDialogOpen] = useState(false);
+  const [clientSearch, setClientSearch] = useState("");
+  const [clientPickerOpen, setClientPickerOpen] = useState(false);
+  const [clientSortBy, setClientSortBy] = useState<ClientSortOption[]>(["name-asc"]);
+  const [clientFilters, setClientFilters] = useState<ClientFilters>(EMPTY_CLIENT_FILTERS);
   // Per-product quantity input (product catalog cards)
   const [productQty, setProductQty] = useState<Record<string, number>>({});
 
@@ -502,6 +508,17 @@ export function SalesPanel() {
     sortBy,
   );
 
+  // Client picker search (name/RIF/email/phone). Keep the selected client in the
+  // list even when it doesn't match, so its label stays visible in the trigger.
+  const matchedClients = sortClients(
+    filterClients(clients, clientSearch, clientFilters),
+    clientSortBy,
+  );
+  const filteredClients =
+    selectedClient && !matchedClients.some((c) => c.id === selectedClient.id)
+      ? [selectedClient, ...matchedClients]
+      : matchedClients;
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-500">
@@ -546,20 +563,93 @@ export function SalesPanel() {
             </DialogHeader>
 
             <div className="flex flex-col sm:flex-row sm:items-end gap-2 pb-3 border-b">
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 space-y-1.5">
                 <Label className="text-sm">Cliente</Label>
-                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un cliente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name} - {c.rif}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <Input
+                    type="search"
+                    placeholder={
+                      selectedClient
+                        ? `${selectedClient.name} · ${selectedClient.rif}`
+                        : "Buscar por nombre, RIF, correo o teléfono..."
+                    }
+                    value={clientSearch}
+                    onChange={(e) => {
+                      setClientSearch(e.target.value);
+                      setClientPickerOpen(true);
+                    }}
+                    className={`pl-9 pr-9 ${selectedClient && !clientSearch ? "placeholder:text-slate-700 placeholder:font-medium" : ""}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setClientPickerOpen((o) => !o)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+                    aria-label="Mostrar clientes"
+                  >
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${clientPickerOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                </div>
+                {clientPickerOpen && (
+                <>
+                <div className="flex gap-2">
+                  <ClientSortControl
+                    value={clientSortBy}
+                    onChange={setClientSortBy}
+                    className="flex-1"
+                  />
+                  <ClientFilterControl
+                    value={clientFilters}
+                    onChange={setClientFilters}
+                    className="flex-1"
+                  />
+                </div>
+                <div className="rounded-lg border border-slate-200 divide-y divide-slate-100 max-h-56 overflow-y-auto bg-white">
+                  {filteredClients.length === 0 ? (
+                    <div className="px-3 py-6 text-center text-sm text-slate-400">
+                      No se encontraron clientes
+                    </div>
+                  ) : (
+                    filteredClients.map((c) => {
+                      const selected = c.id === selectedClientId;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedClientId(selected ? "" : c.id);
+                            setClientSearch("");
+                            setClientPickerOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 flex items-center gap-2 transition-colors ${
+                            selected ? "bg-amber-50" : "hover:bg-slate-50"
+                          }`}
+                        >
+                          <span
+                            className={`shrink-0 h-4 w-4 rounded-full border-2 flex items-center justify-center ${
+                              selected ? "border-amber-500 bg-amber-500" : "border-slate-300"
+                            }`}
+                          >
+                            {selected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-sm font-medium text-slate-800 truncate">
+                              {c.name}
+                            </span>
+                            <span className="block text-xs text-slate-500 truncate">
+                              {c.rif}
+                              {c.phone ? ` · ${c.phone}` : ""}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+                </>
+                )}
               </div>
               {isAdmin && (
                 <ClientFormDialog
@@ -587,63 +677,67 @@ export function SalesPanel() {
                 {cart.map((item) => (
                   <div
                     key={item.code}
-                    className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100"
+                    className="flex gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100"
                   >
                     {item.imageUrl ? (
                       <img
                         src={item.imageUrl}
                         alt={item.name}
-                        className="w-16 h-16 object-cover rounded-lg"
+                        className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-lg shrink-0"
                       />
                     ) : (
-                      <div className="w-16 h-16 rounded-lg bg-slate-100 flex items-center justify-center">
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
                         <Package className="w-6 h-6 text-slate-300" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold truncate">{item.name}</h3>
-                      <p className="text-xs text-slate-500">{item.code}</p>
-                      <p className="text-sm font-bold text-amber-600">
-                        ${item.price.toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-8 w-8"
-                        onClick={() => updateQuantity(item.code, -1)}
-                      >
-                        <Minus className="w-4 h-4" />
-                      </Button>
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => setQuantity(item.code, parseInt(e.target.value) || 1)}
-                        className="w-12 text-center font-semibold border border-slate-200 rounded-md h-8 outline-none focus:ring-2 focus:ring-amber-400 text-sm"
-                      />
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-8 w-8"
-                        onClick={() => updateQuantity(item.code, 1)}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <div className="text-right min-w-[90px]">
-                      <p className="font-bold">
-                        ${(item.price * item.quantity).toFixed(2)}
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => removeFromCart(item.code)}
-                        className="text-red-500 hover:text-red-700 h-7 px-2"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold truncate">{item.name}</h3>
+                          <p className="text-xs text-slate-500">{item.code}</p>
+                          <p className="text-sm font-bold text-amber-600">
+                            ${item.price.toFixed(2)}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-bold whitespace-nowrap">
+                            ${(item.price * item.quantity).toFixed(2)}
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removeFromCart(item.code)}
+                            className="text-red-500 hover:text-red-700 h-7 px-2 mt-1"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 mt-2">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8 shrink-0"
+                          onClick={() => updateQuantity(item.code, -1)}
+                        >
+                          <Minus className="w-4 h-4" />
+                        </Button>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => setQuantity(item.code, parseInt(e.target.value) || 1)}
+                          className="w-12 text-center font-semibold border border-slate-200 rounded-md h-8 outline-none focus:ring-2 focus:ring-amber-400 text-sm"
+                        />
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8 shrink-0"
+                          onClick={() => updateQuantity(item.code, 1)}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}

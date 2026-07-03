@@ -132,7 +132,8 @@ interface Vendor {
 interface FilterProps {
   value: ClientFilters;
   onChange: (value: ClientFilters) => void;
-  vendors: Vendor[];
+  /** When omitted, the vendor picker section is hidden. */
+  vendors?: Vendor[];
   className?: string;
 }
 
@@ -208,6 +209,7 @@ export function ClientFilterControl({ value, onChange, vendors, className }: Fil
             </div>
           ))}
 
+          {vendors && (
           <div className="pt-1">
             <span className="block px-2 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
               Vendedor
@@ -235,6 +237,7 @@ export function ClientFilterControl({ value, onChange, vendors, className }: Fil
               })}
             </div>
           </div>
+          )}
         </div>
       </PopoverContent>
     </Popover>
