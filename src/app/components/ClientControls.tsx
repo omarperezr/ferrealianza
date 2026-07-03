@@ -1,0 +1,242 @@
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { ArrowDownUp, SlidersHorizontal, X } from 'lucide-react';
+import {
+  CLIENT_SORT_FIELDS,
+  ClientSortField,
+  ClientSortOption,
+  ClientFilters,
+  TriState,
+  activeFilterCount,
+  clientFieldOf,
+  clientDirOf,
+  EMPTY_CLIENT_FILTERS,
+} from '../utils/sortClients';
+
+interface SortProps {
+  value: ClientSortOption[];
+  onChange: (value: ClientSortOption[]) => void;
+  className?: string;
+}
+
+/** Multi-key "Ordenar por" control for clients (mirrors ProductSortControl). */
+export function ClientSortControl({ value, onChange, className }: SortProps) {
+  const indexOfField = (field: ClientSortField) =>
+    value.findIndex((o) => clientFieldOf(o) === field);
+
+  const setDirection = (field: ClientSortField, dir: 'asc' | 'desc') => {
+    const option = `${field}-${dir}` as ClientSortOption;
+    const idx = indexOfField(field);
+    if (idx === -1) {
+      onChange([...value, option]);
+    } else if (value[idx] === option) {
+      onChange(value.filter((_, i) => i !== idx));
+    } else {
+      onChange(value.map((o, i) => (i === idx ? option : o)));
+    }
+  };
+
+  const summary =
+    value.length === 0
+      ? 'Ordenar por'
+      : value
+          .map((o) => CLIENT_SORT_FIELDS.find((f) => f.field === clientFieldOf(o))!.label)
+          .join(' › ');
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className={`justify-start font-normal ${className || ''}`}>
+          <ArrowDownUp className="w-4 h-4 mr-2 shrink-0" />
+          <span className="truncate">{summary}</span>
+          {value.length > 0 && (
+            <span className="ml-2 shrink-0 rounded-full bg-amber-500 text-slate-900 text-xs font-semibold min-w-[20px] h-5 px-1 flex items-center justify-center">
+              {value.length}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-2">
+        <div className="flex items-center justify-between px-2 py-1.5">
+          <span className="text-sm font-semibold text-slate-700">Ordenar por</span>
+          {value.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onChange([])}
+              className="text-xs text-slate-500 hover:text-slate-700 inline-flex items-center gap-1"
+            >
+              <X className="w-3 h-3" />
+              Limpiar
+            </button>
+          )}
+        </div>
+        <p className="px-2 pb-1.5 text-xs text-slate-400">
+          El orden de selección define la prioridad.
+        </p>
+        <div className="space-y-1">
+          {CLIENT_SORT_FIELDS.map((f) => {
+            const idx = indexOfField(f.field);
+            const active = idx !== -1;
+            const dir = active ? clientDirOf(value[idx]) : undefined;
+            return (
+              <div
+                key={f.field}
+                className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-slate-50"
+              >
+                <span
+                  className={`flex items-center justify-center w-5 h-5 rounded-full text-xs font-semibold shrink-0 ${
+                    active ? 'bg-amber-500 text-slate-900' : 'bg-slate-100 text-slate-400'
+                  }`}
+                >
+                  {active ? idx + 1 : '·'}
+                </span>
+                <span className="flex-1 text-sm text-slate-700">{f.label}</span>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setDirection(f.field, 'asc')}
+                    className={`text-xs px-2 py-1 rounded border ${
+                      active && dir === 'asc'
+                        ? 'bg-amber-500 border-amber-500 text-slate-900 font-medium'
+                        : 'border-slate-200 text-slate-500 hover:bg-slate-100'
+                    }`}
+                  >
+                    {f.ascLabel}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDirection(f.field, 'desc')}
+                    className={`text-xs px-2 py-1 rounded border ${
+                      active && dir === 'desc'
+                        ? 'bg-amber-500 border-amber-500 text-slate-900 font-medium'
+                        : 'border-slate-200 text-slate-500 hover:bg-slate-100'
+                    }`}
+                  >
+                    {f.descLabel}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+interface Vendor {
+  id: string;
+  name: string;
+}
+
+interface FilterProps {
+  value: ClientFilters;
+  onChange: (value: ClientFilters) => void;
+  vendors: Vendor[];
+  className?: string;
+}
+
+const TRI_OPTIONS: { value: TriState; label: string }[] = [
+  { value: 'any', label: 'Todos' },
+  { value: 'yes', label: 'Sí' },
+  { value: 'no', label: 'No' },
+];
+
+const TRI_ROWS: { key: 'email' | 'phone'; label: string }[] = [
+  { key: 'email', label: 'Correo' },
+  { key: 'phone', label: 'Teléfono' },
+];
+
+/** Filters for clients: a vendor picker plus email/phone presence. */
+export function ClientFilterControl({ value, onChange, vendors, className }: FilterProps) {
+  const count = activeFilterCount(value);
+  const setTri = (key: 'email' | 'phone', state: TriState) =>
+    onChange({ ...value, [key]: state });
+  const setVendor = (vendorId: string) =>
+    onChange({ ...value, vendorId: value.vendorId === vendorId ? '' : vendorId });
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className={`justify-start font-normal ${className || ''}`}>
+          <SlidersHorizontal className="w-4 h-4 mr-2 shrink-0" />
+          <span className="truncate">Filtrar</span>
+          {count > 0 && (
+            <span className="ml-2 shrink-0 rounded-full bg-amber-500 text-slate-900 text-xs font-semibold min-w-[20px] h-5 px-1 flex items-center justify-center">
+              {count}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-2">
+        <div className="flex items-center justify-between px-2 py-1.5">
+          <span className="text-sm font-semibold text-slate-700">Filtrar</span>
+          {count > 0 && (
+            <button
+              type="button"
+              onClick={() => onChange(EMPTY_CLIENT_FILTERS)}
+              className="text-xs text-slate-500 hover:text-slate-700 inline-flex items-center gap-1"
+            >
+              <X className="w-3 h-3" />
+              Limpiar
+            </button>
+          )}
+        </div>
+        <div className="space-y-1">
+          {TRI_ROWS.map((row) => (
+            <div
+              key={row.key}
+              className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-slate-50"
+            >
+              <span className="flex-1 text-sm text-slate-700">{row.label}</span>
+              <div className="flex gap-1">
+                {TRI_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setTri(row.key, opt.value)}
+                    className={`text-xs px-2 py-1 rounded border ${
+                      value[row.key] === opt.value
+                        ? 'bg-amber-500 border-amber-500 text-slate-900 font-medium'
+                        : 'border-slate-200 text-slate-500 hover:bg-slate-100'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          <div className="pt-1">
+            <span className="block px-2 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Vendedor
+            </span>
+            <div className="max-h-52 overflow-y-auto space-y-0.5">
+              {vendors.length === 0 && (
+                <p className="px-2 py-1.5 text-sm text-slate-400">No hay vendedores.</p>
+              )}
+              {vendors.map((v) => {
+                const active = value.vendorId === v.id;
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => setVendor(v.id)}
+                    className={`w-full text-left text-sm px-2 py-1.5 rounded-md truncate ${
+                      active
+                        ? 'bg-amber-500 text-slate-900 font-medium'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {v.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}

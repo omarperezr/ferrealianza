@@ -763,11 +763,11 @@ export function SalesPanel() {
                 <p className="text-2xl sm:text-3xl font-bold text-amber-600">
                   ${product.price.toFixed(2)}
                 </p>
-                <div className="flex gap-1.5 pt-0.5 items-center">
-                  <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">
+                <div className="flex flex-col sm:flex-row gap-1.5 pt-0.5 sm:items-center">
+                  <div className="flex items-center justify-between sm:justify-start border border-slate-200 rounded-lg overflow-hidden self-stretch sm:self-auto">
                     <button
                       type="button"
-                      className="px-2 py-1.5 text-slate-600 hover:bg-slate-100 transition-colors"
+                      className="px-3 sm:px-2 py-1.5 text-slate-600 hover:bg-slate-100 transition-colors"
                       onClick={() => setProductQty((q) => ({ ...q, [product.code]: Math.max(1, (q[product.code] || 1) - 1) }))}
                     >
                       <Minus className="w-3.5 h-3.5" />
@@ -781,28 +781,30 @@ export function SalesPanel() {
                     />
                     <button
                       type="button"
-                      className="px-2 py-1.5 text-slate-600 hover:bg-slate-100 transition-colors"
+                      className="px-3 sm:px-2 py-1.5 text-slate-600 hover:bg-slate-100 transition-colors"
                       onClick={() => setProductQty((q) => ({ ...q, [product.code]: (q[product.code] || 1) + 1 }))}
                     >
                       <Plus className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <Button
-                    onClick={() => addToCart(product, productQty[product.code] || 1)}
-                    className="flex-1 text-sm h-9"
-                  >
-                    <ShoppingCart className="w-4 h-4 mr-1" />
-                    Añadir
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 shrink-0"
-                    onClick={() => handleShare(product)}
-                    title="Compartir"
-                  >
-                    <Share2 className="w-4 h-4" />
-                  </Button>
+                  <div className="flex gap-1.5 w-full sm:flex-1">
+                    <Button
+                      onClick={() => addToCart(product, productQty[product.code] || 1)}
+                      className="flex-1 text-sm h-9"
+                    >
+                      <ShoppingCart className="w-4 h-4 mr-1" />
+                      Añadir
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => handleShare(product)}
+                      title="Compartir"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>

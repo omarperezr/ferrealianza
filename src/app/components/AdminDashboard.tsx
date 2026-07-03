@@ -11,6 +11,7 @@ import {
   deleteProducts,
   deleteClient,
   deleteClients,
+  getVendors,
   setProductHidden,
   isOnline,
 } from '../utils/dataStore';
@@ -48,6 +49,14 @@ import {
   sortProducts,
 } from '../utils/sortProducts';
 import { ProductSortControl } from './ProductSortControl';
+import { ClientSortControl, ClientFilterControl } from './ClientControls';
+import {
+  ClientSortOption,
+  ClientFilters,
+  EMPTY_CLIENT_FILTERS,
+  filterClients,
+  sortClients,
+} from '../utils/sortClients';
 
 interface Product {
   code: string;
@@ -96,6 +105,10 @@ export function AdminDashboard() {
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
   const [clientBulkDeleting, setClientBulkDeleting] = useState(false);
   const [importingClients, setImportingClients] = useState(false);
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [clientSortBy, setClientSortBy] = useState<ClientSortOption[]>(['name-asc']);
+  const [clientFilters, setClientFilters] = useState<ClientFilters>(EMPTY_CLIENT_FILTERS);
+  const [vendors, setVendors] = useState<{ id: string; name: string }[]>([]);
 
   // Show cached data instantly, then refresh from the network. Re-runs when the
   // access token is ready so everything appears on first load (no manual refresh).
@@ -112,6 +125,10 @@ export function AdminDashboard() {
         setLoading(false);
       }
       if (cachedClients.length) setClients(cachedClients);
+
+      getVendors(accessToken)
+        .then((v) => !cancelled && setVendors(v))
+        .catch(() => {});
 
       await Promise.all([loadProducts(), loadClients()]);
     })();
@@ -597,6 +614,10 @@ export function AdminDashboard() {
     'flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors';
 
   const visibleProducts = sortProducts(filterProducts(products, searchTerm), sortBy);
+  const visibleClients = sortClients(
+    filterClients(clients, clientSearchTerm, clientFilters),
+    clientSortBy,
+  );
   const allSelected =
     visibleProducts.length > 0 && visibleProducts.every((p) => selectedCodes.has(p.code));
 
@@ -721,6 +742,29 @@ export function AdminDashboard() {
                 </Button>
               )}
             </div>
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+              <div className="relative w-full sm:max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <Input
+                  type="search"
+                  placeholder="Buscar por nombre, RIF, correo o teléfono..."
+                  value={clientSearchTerm}
+                  onChange={(e) => setClientSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <ClientSortControl
+                value={clientSortBy}
+                onChange={setClientSortBy}
+                className="w-full sm:w-auto"
+              />
+              <ClientFilterControl
+                value={clientFilters}
+                onChange={setClientFilters}
+                vendors={vendors}
+                className="w-full sm:w-auto"
+              />
+            </div>
             <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
               <table className="w-full text-sm">
                 <thead>
@@ -736,7 +780,7 @@ export function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {clients.map((client) => {
+                  {visibleClients.map((client) => {
                     const selected = selectedClientIds.has(client.id);
                     return (
                     <tr
@@ -790,10 +834,14 @@ export function AdminDashboard() {
                   })}
                 </tbody>
               </table>
-              {clients.length === 0 && (
+              {visibleClients.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-3">
                   <Users className="w-10 h-10" />
-                  <p>No hay clientes registrados.</p>
+                  <p>
+                    {clients.length === 0
+                      ? 'No hay clientes registrados.'
+                      : 'No se encontraron clientes.'}
+                  </p>
                 </div>
               )}
             </div>
