@@ -166,6 +166,22 @@ export function SalesPanel() {
     };
   }, [accessToken]);
 
+  // Warm the export libraries into the service-worker cache while online, so the
+  // PDF/Excel export still works offline (the chunks are lazy-loaded on demand and
+  // otherwise wouldn't be cached until the first export was done with a connection).
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+    const warm = () => {
+      import("jspdf").catch(() => {});
+      import("jspdf-autotable").catch(() => {});
+      import("xlsx").catch(() => {});
+      fetch(logoImage).catch(() => {}); // cache logo for the offline PDF header
+    };
+    const idle = (window as any).requestIdleCallback;
+    if (idle) idle(warm);
+    else setTimeout(warm, 2000);
+  }, []);
+
   // Persist the cart (and its totals/client) so a page refresh keeps it.
   useEffect(() => {
     try {
