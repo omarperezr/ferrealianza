@@ -50,8 +50,8 @@ export function filterClients(clients: Client[], term: string, filters: ClientFi
     if (
       q &&
       !(
-        c.name.toLowerCase().includes(q) ||
-        c.rif.toLowerCase().includes(q) ||
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.rif || '').toLowerCase().includes(q) ||
         (c.email || '').toLowerCase().includes(q) ||
         (c.phone || '').toLowerCase().includes(q)
       )

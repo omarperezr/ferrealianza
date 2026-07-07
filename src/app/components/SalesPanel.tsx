@@ -94,13 +94,32 @@ interface PersistedCart {
   selectedClientId: string;
 }
 
+// Carts persisted by older app versions may contain items with missing fields;
+// sanitize so rendering never crashes on undefined price/name.
+const sanitizeCartItem = (item: any): CartItem | null => {
+  if (!item || typeof item !== "object" || !item.code) return null;
+  return {
+    ...item,
+    code: String(item.code),
+    name: String(item.name ?? ""),
+    category: String(item.category ?? ""),
+    amountPerPackage: String(item.amountPerPackage ?? ""),
+    imageUrl: String(item.imageUrl ?? ""),
+    price: Number(item.price) || 0,
+    stock: Number(item.stock) || 0,
+    quantity: Math.max(1, Math.floor(Number(item.quantity)) || 1),
+  };
+};
+
 const loadPersistedCart = (): PersistedCart => {
   try {
     const raw = localStorage.getItem(CART_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       return {
-        cart: Array.isArray(parsed.cart) ? parsed.cart : [],
+        cart: Array.isArray(parsed.cart)
+          ? (parsed.cart.map(sanitizeCartItem).filter(Boolean) as CartItem[])
+          : [],
         discount: Number(parsed.discount) || 0,
         tax: Number(parsed.tax) || 0,
         selectedClientId: typeof parsed.selectedClientId === "string" ? parsed.selectedClientId : "",
@@ -273,6 +292,16 @@ export function SalesPanel() {
       toast.error("Selecciona un cliente para generar el presupuesto", { id: "export" });
       return;
     }
+    try {
+      await doExportToPDF();
+    } catch (error) {
+      console.error("Error al generar el PDF:", error);
+      toast.error("No se pudo generar el PDF. Intenta de nuevo.", { id: "export" });
+    }
+  };
+
+  const doExportToPDF = async () => {
+    if (!selectedClient) return;
 
     const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
       import("jspdf"),
@@ -433,6 +462,15 @@ export function SalesPanel() {
   };
 
   const exportToExcel = async () => {
+    try {
+      await doExportToExcel();
+    } catch (error) {
+      console.error("Error al generar el Excel:", error);
+      toast.error("No se pudo generar el Excel. Intenta de nuevo.", { id: "export" });
+    }
+  };
+
+  const doExportToExcel = async () => {
     const XLSX = await import("xlsx");
     const data = cart.map((item) => ({
       Código: item.code,

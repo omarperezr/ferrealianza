@@ -55,14 +55,44 @@ async function enqueue(op: OutboxOp) {
 
 // ---------- Reads (network-first, cache fallback) ----------
 
+// Data can arrive with missing fields (old caches, Excel/PDF imports, older app
+// versions). Normalizing here guarantees the UI never crashes on
+// `undefined.toLowerCase()` / `undefined.toFixed()` while rendering.
+const normalizeProduct = (p: any): Product => ({
+  ...p,
+  code: String(p?.code ?? ''),
+  name: String(p?.name ?? ''),
+  category: String(p?.category ?? ''),
+  amountPerPackage: String(p?.amountPerPackage ?? ''),
+  imageUrl: String(p?.imageUrl ?? ''),
+  price: Number(p?.price) || 0,
+  stock: Number(p?.stock) || 0,
+});
+
+const normalizeClient = (c: any): Client => ({
+  ...c,
+  id: String(c?.id ?? ''),
+  name: String(c?.name ?? ''),
+  rif: String(c?.rif ?? ''),
+  address: String(c?.address ?? ''),
+  email: String(c?.email ?? ''),
+  phone: String(c?.phone ?? ''),
+});
+
+const normalizeProducts = (items: any[]): Product[] =>
+  (Array.isArray(items) ? items : []).filter(Boolean).map(normalizeProduct);
+
+const normalizeClients = (items: any[]): Client[] =>
+  (Array.isArray(items) ? items : []).filter(Boolean).map(normalizeClient);
+
 /** Reads the locally cached products without hitting the network (instant). */
 export async function getCachedProducts(): Promise<Product[]> {
-  return (await idbGet<Product[]>(PRODUCTS_KEY)) || [];
+  return normalizeProducts((await idbGet<Product[]>(PRODUCTS_KEY)) || []);
 }
 
 /** Reads the locally cached clients without hitting the network (instant). */
 export async function getCachedClients(): Promise<Client[]> {
-  return (await idbGet<Client[]>(CLIENTS_KEY)) || [];
+  return normalizeClients((await idbGet<Client[]>(CLIENTS_KEY)) || []);
 }
 
 export async function getProducts(
@@ -71,14 +101,14 @@ export async function getProducts(
   if (isOnline()) {
     try {
       const data = await apiFetch('/products', { accessToken });
-      const items: Product[] = data.products || [];
+      const items = normalizeProducts(data.products || []);
       await idbSet(PRODUCTS_KEY, items);
       return { items, offline: false };
     } catch {
       /* fall through to cache */
     }
   }
-  return { items: (await idbGet<Product[]>(PRODUCTS_KEY)) || [], offline: true };
+  return { items: normalizeProducts((await idbGet<Product[]>(PRODUCTS_KEY)) || []), offline: true };
 }
 
 export async function getClients(
@@ -87,14 +117,14 @@ export async function getClients(
   if (isOnline()) {
     try {
       const data = await apiFetch('/clients', { accessToken });
-      const items: Client[] = data.clients || [];
+      const items = normalizeClients(data.clients || []);
       await idbSet(CLIENTS_KEY, items);
       return { items, offline: false };
     } catch {
       /* fall through to cache */
     }
   }
-  return { items: (await idbGet<Client[]>(CLIENTS_KEY)) || [], offline: true };
+  return { items: normalizeClients((await idbGet<Client[]>(CLIENTS_KEY)) || []), offline: true };
 }
 
 // ---------- Client writes (offline-aware) ----------

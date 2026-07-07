@@ -53,9 +53,9 @@ export function filterProducts<T extends SortableProduct>(products: T[], term: s
   if (!q) return products;
   return products.filter(
     (p) =>
-      p.name.toLowerCase().includes(q) ||
-      p.code.toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q),
+      (p.name || '').toLowerCase().includes(q) ||
+      (p.code || '').toLowerCase().includes(q) ||
+      (p.category || '').toLowerCase().includes(q),
   );
 }
 
