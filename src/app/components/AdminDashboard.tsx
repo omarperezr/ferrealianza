@@ -57,6 +57,7 @@ import {
   filterClients,
   sortClients,
 } from '../utils/sortClients';
+import { usePersistentState } from '../utils/usePersistentState';
 
 interface Product {
   code: string;
@@ -94,7 +95,7 @@ export function AdminDashboard() {
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<SortOption[]>(['name-asc']);
+  const [sortBy, setSortBy] = usePersistentState<SortOption[]>('admin-product-sort', ['name-asc']);
   // Bulk-delete mode: when active, product cards become selectable.
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
@@ -106,8 +107,8 @@ export function AdminDashboard() {
   const [clientBulkDeleting, setClientBulkDeleting] = useState(false);
   const [importingClients, setImportingClients] = useState(false);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
-  const [clientSortBy, setClientSortBy] = useState<ClientSortOption[]>(['name-asc']);
-  const [clientFilters, setClientFilters] = useState<ClientFilters>(EMPTY_CLIENT_FILTERS);
+  const [clientSortBy, setClientSortBy] = usePersistentState<ClientSortOption[]>('admin-client-sort', ['name-asc']);
+  const [clientFilters, setClientFilters] = usePersistentState<ClientFilters>('admin-client-filters', EMPTY_CLIENT_FILTERS);
   const [vendors, setVendors] = useState<{ id: string; name: string }[]>([]);
 
   // Show cached data instantly, then refresh from the network. Re-runs when the

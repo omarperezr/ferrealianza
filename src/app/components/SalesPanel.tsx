@@ -48,6 +48,7 @@ import {
   ClientFilters,
 } from "../utils/sortClients";
 import { ClientSortControl, ClientFilterControl } from "./ClientControls";
+import { usePersistentState } from "../utils/usePersistentState";
 import { ProductSortControl } from "./ProductSortControl";
 
 const loadImageAsDataUrl = (src: string): Promise<string> =>
@@ -140,7 +141,7 @@ export function SalesPanel() {
   const [discount, setDiscount] = useState(() => loadPersistedCart().discount);
   const [tax, setTax] = useState(() => loadPersistedCart().tax);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption[]>(["name-asc"]);
+  const [sortBy, setSortBy] = usePersistentState<SortOption[]>("sales-product-sort", ["name-asc"]);
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>(
     () => loadPersistedCart().selectedClientId,
@@ -148,8 +149,8 @@ export function SalesPanel() {
   const [clientDialogOpen, setClientDialogOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
-  const [clientSortBy, setClientSortBy] = useState<ClientSortOption[]>(["name-asc"]);
-  const [clientFilters, setClientFilters] = useState<ClientFilters>(EMPTY_CLIENT_FILTERS);
+  const [clientSortBy, setClientSortBy] = usePersistentState<ClientSortOption[]>("sales-client-sort", ["name-asc"]);
+  const [clientFilters, setClientFilters] = usePersistentState<ClientFilters>("sales-client-filters", EMPTY_CLIENT_FILTERS);
   // Per-product quantity input (product catalog cards)
   const [productQty, setProductQty] = useState<Record<string, number>>({});
 
