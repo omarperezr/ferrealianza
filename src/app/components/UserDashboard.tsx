@@ -17,10 +17,10 @@ export function UserDashboard() {
               <Logo className="h-8 sm:h-10 object-contain" />
             </div>
             <div className="leading-tight min-w-0">
-              <h1 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
+              <h1 className="text-base sm:text-lg font-bold text-white tracking-tight leading-tight break-words">
                 Panel del Vendedor
               </h1>
-              <p className="text-xs text-amber-400/90 truncate">Catálogo y presupuestos</p>
+              <p className="text-xs text-amber-400/90 break-words">Catálogo y presupuestos</p>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">

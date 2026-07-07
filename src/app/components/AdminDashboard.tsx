@@ -635,10 +635,10 @@ export function AdminDashboard() {
               <Logo className="h-8 sm:h-10 object-contain" />
             </div>
             <div className="leading-tight min-w-0">
-              <h1 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
+              <h1 className="text-base sm:text-lg font-bold text-white tracking-tight leading-tight break-words">
                 Panel del Administrador
               </h1>
-              <p className="text-xs text-amber-400/90 truncate">Inventario y clientes</p>
+              <p className="text-xs text-amber-400/90 break-words">Inventario y clientes</p>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -1084,7 +1084,7 @@ export function AdminDashboard() {
               <CardContent className="p-3 sm:p-4">
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-semibold text-base sm:text-lg leading-snug line-clamp-2">{product.name}</h3>
+                    <h3 className="font-semibold text-base sm:text-lg leading-snug break-words">{product.name}</h3>
                     <span className="text-xs text-slate-400 whitespace-nowrap">{product.code}</span>
                   </div>
                   <span className="inline-block text-xs sm:text-sm font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">

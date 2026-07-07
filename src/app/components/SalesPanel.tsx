@@ -901,7 +901,7 @@ export function SalesPanel() {
                 <span className="inline-block text-xs sm:text-sm font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
                   {product.category}
                 </span>
-                <h3 className="font-semibold text-base sm:text-lg leading-snug line-clamp-2 min-h-[2.75rem]">
+                <h3 className="font-semibold text-base sm:text-lg leading-snug break-words min-h-[2.75rem]">
                   {product.name}
                 </h3>
                 {product.amountPerPackage && (
