@@ -125,26 +125,46 @@ function rowsFromFragments(frags: Frag[]): ParsedRow[] {
   return products;
 }
 
-// Fast content hash (FNV-1a) over a downscaled pixel sample, used to detect
-// blank cells and to deduplicate identical images across rows/pages.
-function hashPixels(pixels: Uint8ClampedArray): { hash: string; nonWhiteRatio: number } {
+// Fast content hash (FNV-1a) over a ~40x30 grid of sampled pixels, used to
+// detect blank cells and to deduplicate identical images across rows/pages.
+// Also reports how much of the sample is transparent: a fully transparent
+// readback means the page canvas lost its backing store (memory pressure on
+// mobile), i.e. the pixels are garbage, not a real image.
+function hashImageData(img: ImageData): {
+  hash: string;
+  nonWhiteRatio: number;
+  transparentRatio: number;
+} {
+  const { data, width, height } = img;
+  const stepX = Math.max(1, Math.floor(width / 40));
+  const stepY = Math.max(1, Math.floor(height / 30));
   let h = 0x811c9dc5;
   let nonWhite = 0;
-  const total = pixels.length / 4;
-  for (let i = 0; i < pixels.length; i += 4) {
-    const r = pixels[i];
-    const g = pixels[i + 1];
-    const b = pixels[i + 2];
-    // Quantize to keep the hash stable against tiny rendering differences.
-    h = (h ^ (r & 0xf0)) >>> 0;
-    h = Math.imul(h, 0x01000193) >>> 0;
-    h = (h ^ (g & 0xf0)) >>> 0;
-    h = Math.imul(h, 0x01000193) >>> 0;
-    h = (h ^ (b & 0xf0)) >>> 0;
-    h = Math.imul(h, 0x01000193) >>> 0;
-    if (r < 245 || g < 245 || b < 245) nonWhite++;
+  let transparent = 0;
+  let total = 0;
+  for (let y = 0; y < height; y += stepY) {
+    for (let x = 0; x < width; x += stepX) {
+      const i = (y * width + x) * 4;
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      // Quantize to keep the hash stable against tiny rendering differences.
+      h = (h ^ (r & 0xf0)) >>> 0;
+      h = Math.imul(h, 0x01000193) >>> 0;
+      h = (h ^ (g & 0xf0)) >>> 0;
+      h = Math.imul(h, 0x01000193) >>> 0;
+      h = (h ^ (b & 0xf0)) >>> 0;
+      h = Math.imul(h, 0x01000193) >>> 0;
+      if (r < 245 || g < 245 || b < 245) nonWhite++;
+      if (data[i + 3] < 16) transparent++;
+      total++;
+    }
   }
-  return { hash: h.toString(16), nonWhiteRatio: total ? nonWhite / total : 0 };
+  return {
+    hash: h.toString(16),
+    nonWhiteRatio: total ? nonWhite / total : 0,
+    transparentRatio: total ? transparent / total : 0,
+  };
 }
 
 function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
@@ -167,93 +187,129 @@ export async function parseProductsFromPdf(
   const seenCodes = new Set<string>();
   const RENDER_SCALE = 2;
 
-  for (let p = 1; p <= doc.numPages; p++) {
-    const page = await doc.getPage(p);
-    const tc = await page.getTextContent();
-    const frags: Frag[] = tc.items
-      .map((it: any) => ({
-        s: (it.str || '').trim(),
-        x: it.transform[4],
-        y: it.transform[5],
-      }))
-      .filter((f) => f.s !== '');
+  // A single page canvas and a single crop canvas are reused for the whole
+  // document. Creating thousands of canvases (327 pages × several per row)
+  // pressures GPU/heap memory on mobile devices; when the browser evicts a
+  // canvas backing store its contents silently become blank, which is how
+  // blank product images used to get uploaded.
+  const pageCanvas = document.createElement('canvas');
+  const cropCanvas = document.createElement('canvas');
 
-    const rows = rowsFromFragments(frags);
-    if (rows.length === 0) {
-      onProgress?.(p, doc.numPages);
-      continue; // image-only / promo page: nothing to extract
-    }
+  try {
+    for (let p = 1; p <= doc.numPages; p++) {
+      const page = await doc.getPage(p);
+      const tc = await page.getTextContent();
+      const frags: Frag[] = tc.items
+        .map((it: any) => ({
+          s: (it.str || '').trim(),
+          x: it.transform[4],
+          y: it.transform[5],
+        }))
+        .filter((f) => f.s !== '');
 
-    // Render the page once; crop each product's image cell from it.
-    const viewport = page.getViewport({ scale: RENDER_SCALE });
-    const pageCanvas = document.createElement('canvas');
-    pageCanvas.width = Math.ceil(viewport.width);
-    pageCanvas.height = Math.ceil(viewport.height);
-    const pageCtx = pageCanvas.getContext('2d');
-    if (pageCtx) {
-      await page.render({ canvasContext: pageCtx, viewport }).promise;
-    }
-
-    for (const row of rows) {
-      if (seenCodes.has(row.code)) continue;
-      seenCodes.add(row.code);
-
-      let image: ExtractedImage | undefined;
-      if (pageCtx) {
-        image = await cropImageCell(pageCanvas, viewport, row.anchorY);
+      const rows = rowsFromFragments(frags);
+      if (rows.length === 0) {
+        onProgress?.(p, doc.numPages);
+        page.cleanup();
+        continue; // image-only / promo page: nothing to extract
       }
 
-      const { anchorY, ...product } = row;
-      all.push({ ...product, image });
-    }
+      // Render the page once; crop each product's image cell from it.
+      const viewport = page.getViewport({ scale: RENDER_SCALE });
+      pageCanvas.width = Math.ceil(viewport.width);
+      pageCanvas.height = Math.ceil(viewport.height);
+      // willReadFrequently keeps the bitmap CPU-side, which both speeds up the
+      // per-row getImageData calls and avoids GPU-memory eviction blanking.
+      const pageCtx = pageCanvas.getContext('2d', { willReadFrequently: true });
+      if (pageCtx) {
+        await page.render({ canvasContext: pageCtx, viewport }).promise;
+      }
 
-    onProgress?.(p, doc.numPages);
+      for (const row of rows) {
+        if (seenCodes.has(row.code)) continue;
+        seenCodes.add(row.code);
+
+        let image: ExtractedImage | undefined;
+        if (pageCtx) {
+          image = await cropImageCell(pageCtx, cropCanvas, viewport, row.anchorY);
+        }
+
+        const { anchorY, ...product } = row;
+        all.push({ ...product, image });
+      }
+
+      onProgress?.(p, doc.numPages);
+      page.cleanup();
+    }
+  } finally {
+    // Release the bitmaps promptly instead of waiting for GC.
+    pageCanvas.width = pageCanvas.height = 0;
+    cropCanvas.width = cropCanvas.height = 0;
+    doc.destroy().catch(() => {});
   }
 
   return all;
 }
 
 // Crops the image cell for a row from the rendered page canvas. Returns
-// undefined when the cell is effectively blank (so the existing image is kept).
+// undefined when the cell is effectively blank (so the existing image is kept)
+// or when the pixels could not be read back reliably.
+//
+// The pixels are read once with getImageData and that exact buffer is both
+// hashed and encoded (via putImageData right before toBlob). Hashing one
+// bitmap and encoding another — the previous approach — allowed the encode to
+// happen after the canvas was evicted under memory pressure, uploading blank
+// images that had passed the blank-cell check.
 async function cropImageCell(
-  pageCanvas: HTMLCanvasElement,
+  pageCtx: CanvasRenderingContext2D,
+  cropCanvas: HTMLCanvasElement,
   viewport: any,
   anchorY: number,
 ): Promise<ExtractedImage | undefined> {
   // Convert the PDF-space cell rectangle to device pixels.
   const [px0, py0] = viewport.convertToViewportPoint(IMG_X_LEFT, anchorY + IMG_HALF_ABOVE);
   const [px1, py1] = viewport.convertToViewportPoint(IMG_X_RIGHT, anchorY - IMG_HALF_BELOW);
-  const sx = Math.max(0, Math.min(px0, px1));
-  const sy = Math.max(0, Math.min(py0, py1));
-  const sw = Math.min(pageCanvas.width - sx, Math.abs(px1 - px0));
-  const sh = Math.min(pageCanvas.height - sy, Math.abs(py1 - py0));
+  const pageW = pageCtx.canvas.width;
+  const pageH = pageCtx.canvas.height;
+  const sx = Math.max(0, Math.round(Math.min(px0, px1)));
+  const sy = Math.max(0, Math.round(Math.min(py0, py1)));
+  const sw = Math.min(pageW - sx, Math.round(Math.abs(px1 - px0)));
+  const sh = Math.min(pageH - sy, Math.round(Math.abs(py1 - py0)));
   if (sw < 4 || sh < 4) return undefined;
 
-  const out = document.createElement('canvas');
-  out.width = Math.round(sw);
-  out.height = Math.round(sh);
-  const ctx = out.getContext('2d');
-  if (!ctx) return undefined;
-  // White background so transparent areas don't turn black in JPEG.
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, out.width, out.height);
-  ctx.drawImage(pageCanvas, sx, sy, sw, sh, 0, 0, out.width, out.height);
+  let imgData: ImageData;
+  try {
+    imgData = pageCtx.getImageData(sx, sy, sw, sh);
+  } catch {
+    return undefined;
+  }
 
-  // Downscale a copy to sample pixels for blank detection + hashing.
-  const sample = document.createElement('canvas');
-  sample.width = 40;
-  sample.height = 30;
-  const sctx = sample.getContext('2d');
-  if (!sctx) return undefined;
-  sctx.drawImage(out, 0, 0, sample.width, sample.height);
-  const { hash, nonWhiteRatio } = hashPixels(
-    sctx.getImageData(0, 0, sample.width, sample.height).data,
-  );
+  const { hash, nonWhiteRatio, transparentRatio } = hashImageData(imgData);
+
+  // A (nearly) fully transparent readback means the rendered page was lost
+  // (evicted canvas): the data is garbage, not a picture. Skip the image so
+  // the product still imports and any existing image is preserved.
+  if (transparentRatio > 0.95) return undefined;
 
   // Mostly white => treat as an empty cell (no image to import).
   if (nonWhiteRatio < 0.02) return undefined;
 
-  const blob = await canvasToBlob(out);
-  if (!blob) return undefined;
+  // Force full opacity so JPEG encoding can't darken semi-transparent pixels.
+  const px = imgData.data;
+  for (let i = 3; i < px.length; i += 4) px[i] = 255;
+
+  cropCanvas.width = sw;
+  cropCanvas.height = sh;
+  const ctx = cropCanvas.getContext('2d');
+  if (!ctx) return undefined;
+  ctx.putImageData(imgData, 0, 0);
+
+  let blob = await canvasToBlob(cropCanvas);
+  if (!blob || blob.size < 100) {
+    // The encode raced a canvas eviction; restore the pixels and retry once.
+    ctx.putImageData(imgData, 0, 0);
+    blob = await canvasToBlob(cropCanvas);
+  }
+  if (!blob || blob.size < 100) return undefined;
   return { hash, blob };
 }

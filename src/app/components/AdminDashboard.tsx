@@ -58,6 +58,7 @@ import {
   sortClients,
 } from '../utils/sortClients';
 import { usePersistentState } from '../utils/usePersistentState';
+import { withRetry, timeoutSignal } from '../utils/retry';
 
 interface Product {
   code: string;
@@ -431,19 +432,84 @@ export function AdminDashboard() {
   };
 
   // Shared create/update/skip pipeline used by both the Excel and PDF
-  // imports. Sends every row in a single request — the server does the
-  // create-vs-update-vs-skip diffing in one read + one upsert query, instead
-  // of the client looping one create/update request per row.
+  // imports. The server does the create-vs-update-vs-skip diffing per
+  // request; rows are sent in chunks so that on a slow or intermittent
+  // connection one lost request doesn't discard the whole import, and each
+  // chunk is retried while the connection recovers. Re-running an import is
+  // safe: already-saved products are detected server-side and skipped.
   const bulkUpsertProducts = async (
     rows: any[],
   ): Promise<{ created: number; updated: number; skipped: number }> => {
-    toast.loading(`Importando ${rows.length} producto(s)...`, { id: 'import' });
-    const data = await apiFetch('/products/bulk', {
-      method: 'POST',
-      accessToken,
-      body: JSON.stringify({ products: rows }),
-    });
-    return { created: data.created || 0, updated: data.updated || 0, skipped: data.skipped || 0 };
+    const CHUNK = 250;
+    const totals = { created: 0, updated: 0, skipped: 0 };
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const chunk = rows.slice(i, i + CHUNK);
+      toast.loading(
+        `Guardando productos ${Math.min(i + chunk.length, rows.length)}/${rows.length}...`,
+        { id: 'import' },
+      );
+      try {
+        const data = await withRetry(() =>
+          apiFetch('/products/bulk', {
+            method: 'POST',
+            accessToken,
+            body: JSON.stringify({ products: chunk }),
+            signal: timeoutSignal(120000),
+          }),
+        );
+        totals.created += data.created || 0;
+        totals.updated += data.updated || 0;
+        totals.skipped += data.skipped || 0;
+      } catch {
+        throw new Error(
+          `La conexión falló: se guardaron ${i} de ${rows.length} productos. ` +
+            'Vuelve a importar el mismo archivo para continuar; los ya guardados no se duplican.',
+        );
+      }
+    }
+    return totals;
+  };
+
+  // Uploads each distinct embedded image once (rows often share artwork),
+  // retrying transient failures. A failed image never blocks the import — the
+  // product is saved anyway and keeps its existing picture.
+  const uploadImportImages = async (
+    entries: [string, Blob][],
+    fileNameFor: (key: string) => string,
+  ): Promise<{ urls: Map<string, string>; failed: number }> => {
+    const urls = new Map<string, string>();
+    let failed = 0;
+    let done = 0;
+    const queue = [...entries];
+    const worker = async () => {
+      while (queue.length) {
+        const [key, blob] = queue.shift()!;
+        try {
+          const body = new FormData();
+          body.append('file', blob, fileNameFor(key));
+          const res = await withRetry(
+            () =>
+              apiFetch('/upload-image', {
+                method: 'POST',
+                accessToken,
+                body,
+                signal: timeoutSignal(90000),
+              }),
+            { attempts: 3 },
+          );
+          if (res?.imageUrl) urls.set(key, res.imageUrl);
+          else failed++;
+        } catch {
+          failed++;
+        }
+        done++;
+        toast.loading(`Subiendo imágenes ${done}/${entries.length}...`, { id: 'import' });
+      }
+    };
+    // Modest parallelism: enough to overlap latency without saturating a slow
+    // connection (which causes timeouts and duplicate retries).
+    await Promise.all(Array.from({ length: 3 }, worker));
+    return { urls, failed };
   };
 
   const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -470,28 +536,15 @@ export function AdminDashboard() {
         }
       }
 
-      const urlByMedia = new Map<string, string>();
+      let urlByMedia = new Map<string, string>();
+      let imageFailures = 0;
       if (uniqueImages.size > 0 && isOnline()) {
-        const entries = [...uniqueImages.entries()];
-        let uploaded = 0;
-        const queue = [...entries];
-        const uploadWorker = async () => {
-          while (queue.length) {
-            const [mediaPath, blob] = queue.shift()!;
-            try {
-              const body = new FormData();
-              const ext = mediaPath.split('.').pop() || 'png';
-              body.append('file', blob, `xlsx-image.${ext}`);
-              const res = await apiFetch('/upload-image', { method: 'POST', accessToken, body });
-              if (res?.imageUrl) urlByMedia.set(mediaPath, res.imageUrl);
-            } catch {
-              // Skip images that fail to upload; the product still imports.
-            }
-            uploaded++;
-            toast.loading(`Subiendo imágenes ${uploaded}/${entries.length}...`, { id: 'import' });
-          }
-        };
-        await Promise.all(Array.from({ length: 4 }, uploadWorker));
+        const result = await uploadImportImages(
+          [...uniqueImages.entries()],
+          (mediaPath) => `xlsx-image.${mediaPath.split('.').pop() || 'png'}`,
+        );
+        urlByMedia = result.urls;
+        imageFailures = result.failed;
       }
 
       const products = parsed.map((p) => {
@@ -511,7 +564,8 @@ export function AdminDashboard() {
       const { created, updated, skipped } = await bulkUpsertProducts(products);
 
       toast.success(
-        `Importación lista: ${created} creados, ${updated} actualizados, ${skipped} sin cambios`,
+        `Importación lista: ${created} creados, ${updated} actualizados, ${skipped} sin cambios` +
+          (imageFailures ? `. ${imageFailures} imagen(es) no se pudieron subir` : ''),
         { id: 'import' },
       );
       loadProducts();
@@ -549,27 +603,15 @@ export function AdminDashboard() {
         }
       }
 
-      const urlByHash = new Map<string, string>();
+      let urlByHash = new Map<string, string>();
+      let imageFailures = 0;
       if (uniqueImages.size > 0 && isOnline()) {
-        const entries = [...uniqueImages.entries()];
-        let uploaded = 0;
-        const queue = [...entries];
-        const uploadWorker = async () => {
-          while (queue.length) {
-            const [hash, blob] = queue.shift()!;
-            try {
-              const body = new FormData();
-              body.append('file', blob, `${hash}.jpg`);
-              const data = await apiFetch('/upload-image', { method: 'POST', accessToken, body });
-              if (data?.imageUrl) urlByHash.set(hash, data.imageUrl);
-            } catch {
-              // Skip images that fail to upload; the product still imports.
-            }
-            uploaded++;
-            toast.loading(`Subiendo imágenes ${uploaded}/${entries.length}...`, { id: 'import' });
-          }
-        };
-        await Promise.all(Array.from({ length: 4 }, uploadWorker));
+        const result = await uploadImportImages(
+          [...uniqueImages.entries()],
+          (hash) => `${hash}.jpg`,
+        );
+        urlByHash = result.urls;
+        imageFailures = result.failed;
       }
 
       const products = parsed.map((p) => {
@@ -590,7 +632,8 @@ export function AdminDashboard() {
       const { created, updated, skipped } = await bulkUpsertProducts(products);
 
       toast.success(
-        `PDF importado: ${created} creados, ${updated} actualizados, ${skipped} sin cambios`,
+        `PDF importado: ${created} creados, ${updated} actualizados, ${skipped} sin cambios` +
+          (imageFailures ? `. ${imageFailures} imagen(es) no se pudieron subir` : ''),
         { id: 'import' },
       );
       loadProducts();

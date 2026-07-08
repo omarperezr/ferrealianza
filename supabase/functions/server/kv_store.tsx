@@ -77,11 +77,27 @@ export const mdel = async (keys: string[]): Promise<void> => {
 };
 
 // Search for key-value pairs by prefix.
+//
+// PostgREST caps any single select at 1000 rows by default, so this pages
+// through the results with .range(); otherwise stores with more than 1000
+// products/clients silently lose everything past the first thousand.
 export const getByPrefix = async (prefix: string): Promise<any[]> => {
   const supabase = client()
-  const { data, error } = await supabase.from("kv_store_745f9946").select("key, value").like("key", prefix + "%");
-  if (error) {
-    throw new Error(error.message);
+  const PAGE = 1000;
+  const all: any[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("kv_store_745f9946")
+      .select("key, value")
+      .like("key", prefix + "%")
+      .order("key")
+      .range(from, from + PAGE - 1);
+    if (error) {
+      throw new Error(error.message);
+    }
+    const rows = data ?? [];
+    all.push(...rows.map((d) => d.value));
+    if (rows.length < PAGE) break;
   }
-  return data?.map((d) => d.value) ?? [];
+  return all;
 };

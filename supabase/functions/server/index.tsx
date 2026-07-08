@@ -320,7 +320,8 @@ app.post("/make-server-745f9946/products", authMiddleware, adminMiddleware, asyn
     const product = await c.req.json();
     const { code, name, category, amountPerPackage, price, imageUrl, stock, hidden } = product;
 
-    if (!code || !name || !category || !price) {
+    // price 0 is valid, so check "is a number" instead of truthiness.
+    if (!code || !name || !category || isNaN(parseFloat(price))) {
       return c.json({ error: 'Código, nombre, categoría y precio son requeridos' }, 400);
     }
 
@@ -370,16 +371,24 @@ app.post("/make-server-745f9946/products/bulk", authMiddleware, adminMiddleware,
 
     const supabase = getServiceClient();
 
-    // Read existing products with a single prefix query. We can't fetch by an
+    // Read existing products with a paged prefix query. We can't fetch by an
     // exact key list here: PostgREST encodes `.in('key', [...])` into the
     // request URL, and ~1500 keys overflow the URL length limit (500 error).
-    const { data: existingRows, error: fetchError } = await supabase
-      .from('kv_store_745f9946')
-      .select('key, value')
-      .like('key', 'product:%');
-    if (fetchError) throw new Error(fetchError.message);
-
-    const existingByKey = new Map((existingRows || []).map((r: any) => [r.key, r.value]));
+    // Paging is required because PostgREST caps a single select at 1000 rows,
+    // which would make every product past the first thousand look "new".
+    const existingByKey = new Map<string, any>();
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data: existingRows, error: fetchError } = await supabase
+        .from('kv_store_745f9946')
+        .select('key, value')
+        .like('key', 'product:%')
+        .order('key')
+        .range(from, from + PAGE - 1);
+      if (fetchError) throw new Error(fetchError.message);
+      for (const r of existingRows || []) existingByKey.set(r.key, r.value);
+      if ((existingRows || []).length < PAGE) break;
+    }
 
     const toUpsert: { key: string; value: any }[] = [];
     let created = 0;
@@ -387,7 +396,10 @@ app.post("/make-server-745f9946/products/bulk", authMiddleware, adminMiddleware,
     let skipped = 0;
 
     for (const row of rows) {
-      if (!row.code || !row.name || !row.category || !row.price) {
+      // Note: price 0 is valid (the supplier list has items priced later), so
+      // the check must be "is a number", not truthiness.
+      const priceNum = parseFloat(row.price);
+      if (!row.code || !row.name || !row.category || isNaN(priceNum)) {
         skipped++;
         continue;
       }
@@ -400,7 +412,7 @@ app.post("/make-server-745f9946/products/bulk", authMiddleware, adminMiddleware,
         name: row.name,
         category: row.category,
         amountPerPackage: row.amountPerPackage || '',
-        price: parseFloat(row.price),
+        price: priceNum,
         // imageUrl/stock are only overwritten when the row actually provides
         // them, so an import that omits them preserves the existing value.
         imageUrl: row.imageUrl !== undefined ? row.imageUrl : (existing?.imageUrl || ''),
@@ -466,7 +478,9 @@ app.put("/make-server-745f9946/products/:code{.+}", authMiddleware, adminMiddlew
       ...existing,
       ...updates,
       code, // Ensure code doesn't change
-      price: updates.price ? parseFloat(updates.price) : existing.price,
+      price: updates.price !== undefined && updates.price !== ''
+        ? parseFloat(updates.price)
+        : existing.price,
       stock: updates.stock !== undefined && updates.stock !== ''
         ? parseInt(updates.stock, 10)
         : existing.stock ?? 0,

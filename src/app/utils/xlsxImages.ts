@@ -15,6 +15,10 @@ export interface XlsxImage {
   mediaPath: string;
 }
 
+// Only formats browsers can actually render. EMF/WMF (Windows metafiles), WDP
+// (JPEG XR) and TIFF pictures do exist inside supplier spreadsheets, but if we
+// upload them they show up as blank images in the app — so they're skipped and
+// the product keeps its existing image instead.
 const MIME_BY_EXT: Record<string, string> = {
   png: 'image/png',
   jpg: 'image/jpeg',
@@ -22,8 +26,6 @@ const MIME_BY_EXT: Record<string, string> = {
   gif: 'image/gif',
   bmp: 'image/bmp',
   webp: 'image/webp',
-  tiff: 'image/tiff',
-  emf: 'image/emf',
 };
 
 async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
@@ -179,7 +181,8 @@ export async function extractXlsxImages(buf: ArrayBuffer): Promise<Map<number, X
     if (!mediaBytes) continue;
 
     const ext = (mediaPath.split('.').pop() || '').toLowerCase();
-    const mime = MIME_BY_EXT[ext] || 'application/octet-stream';
+    const mime = MIME_BY_EXT[ext];
+    if (!mime) continue; // non-renderable format (emf/wdp/tiff…): skip
     result.set(row, { blob: new Blob([mediaBytes], { type: mime }), mediaPath });
   }
 
