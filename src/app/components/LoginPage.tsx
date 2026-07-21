@@ -14,7 +14,6 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState('user');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,7 +25,7 @@ export function LoginPage() {
         await signIn(email, password);
         toast.success('¡Sesión iniciada exitosamente!', { id: 'auth' });
       } else {
-        await signUp(email, password, name, role);
+        await signUp(email, password, name, 'user');
         toast.success('¡Cuenta creada! Ahora inicia sesión.', { id: 'auth' });
         setIsLogin(true);
         setEmail('');
@@ -99,21 +98,6 @@ export function LoginPage() {
                 placeholder="••••••••"
               />
             </div>
-
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="role">Rol</Label>
-                <select
-                  id="role"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-input-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <option value="user">Vendedor</option>
-                  <option value="admin">Administrador</option>
-                </select>
-              </div>
-            )}
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

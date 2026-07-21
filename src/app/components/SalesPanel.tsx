@@ -112,6 +112,11 @@ const sanitizeCartItem = (item: any): CartItem | null => {
   };
 };
 
+// Percentages are bounded to 0–100 so a manually typed value (the HTML min/max
+// attributes only constrain the spinner) can't produce a negative or nonsensical
+// total in the generated PDF/Excel/text.
+const clampPercent = (n: number) => Math.min(100, Math.max(0, Number.isFinite(n) ? n : 0));
+
 const loadPersistedCart = (): PersistedCart => {
   try {
     const raw = localStorage.getItem(CART_STORAGE_KEY);
@@ -276,6 +281,12 @@ export function SalesPanel() {
 
   const removeFromCart = (code: string) => {
     setCart((prev) => prev.filter((item) => item.code !== code));
+  };
+
+  const clearCart = () => {
+    if (cart.length === 0) return;
+    if (!confirm("¿Vaciar el carrito? Se quitarán todos los productos.")) return;
+    setCart([]);
   };
 
   const calculateSubtotal = () =>
@@ -729,6 +740,17 @@ export function SalesPanel() {
               </div>
             ) : (
               <div className="space-y-4">
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={clearCart}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Limpiar carrito
+                  </Button>
+                </div>
                 {cart.map((item) => (
                   <div
                     key={item.code}
@@ -804,7 +826,7 @@ export function SalesPanel() {
                       <Input
                         type="number"
                         value={discount}
-                        onChange={(e) => setDiscount(Number(e.target.value))}
+                        onChange={(e) => setDiscount(clampPercent(Number(e.target.value)))}
                         min="0"
                         max="100"
                       />
@@ -814,7 +836,7 @@ export function SalesPanel() {
                       <Input
                         type="number"
                         value={tax}
-                        onChange={(e) => setTax(Number(e.target.value))}
+                        onChange={(e) => setTax(clampPercent(Number(e.target.value)))}
                         min="0"
                         max="100"
                       />

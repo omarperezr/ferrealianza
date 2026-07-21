@@ -44,13 +44,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const supabase = createClient(
-    `https://${projectId}.supabase.co`,
-    publicAnonKey,
+  // One client for the provider's whole lifetime. Created once (not per render)
+  // so its background auto-refresh timer and the auth listener below live on the
+  // same instance.
+  const [supabase] = useState(() =>
+    createClient(`https://${projectId}.supabase.co`, publicAnonKey),
   );
 
   useEffect(() => {
     checkSession();
+
+    // supabase-js refreshes the access token in the background (~hourly). Without
+    // this listener the refreshed token never reaches React state, so apiFetch
+    // keeps sending the expired one and every write fails with "token inválido"
+    // until a manual reload. Sync state on refresh / sign-in / sign-out.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setUser(session.user as User);
+        setAccessToken(session.access_token);
+      } else {
+        setUser(null);
+        setAccessToken(null);
+      }
+    });
+    return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkSession = async () => {

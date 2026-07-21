@@ -135,14 +135,25 @@ export async function deleteClients(accessToken: string | null, ids: string[]): 
   const idSet = new Set(ids);
   await idbSet(CLIENTS_KEY, cache.filter((c) => !idSet.has(c.id)));
 
+  // Locally-created clients that were never synced have no server row to delete;
+  // removing them from the cache above is enough.
   const serverIds = ids.filter((id) => !id.startsWith('local-'));
-  if (isOnline() && serverIds.length > 0) {
+  if (serverIds.length === 0) return;
+
+  if (isOnline()) {
     try {
       await apiFetch('/clients', { method: 'DELETE', accessToken, body: JSON.stringify({ ids: serverIds }) });
       return;
     } catch (e: any) {
+      // Surface server rejections; only queue genuine connectivity failures.
       if (!e?.network) throw e;
     }
+  }
+
+  // Offline / network failure: queue each delete so it syncs on reconnect.
+  // Without this the clients reappear on the next server refresh (data loss).
+  for (const id of serverIds) {
+    await enqueue({ kind: 'client.delete', id });
   }
 }
 
@@ -351,14 +362,23 @@ export async function flushOutbox(accessToken: string | null): Promise<number> {
     const outbox = (await idbGet<OutboxOp[]>(OUTBOX_KEY)) || [];
     if (outbox.length === 0) return 0;
 
-    const runOp = (op: OutboxOp) => {
+    // Maps a temp `local-…` id (from an offline create) to the real server id it
+    // got on sync, so a later update/delete of that same client — queued while it
+    // still had the temp id — targets the real row instead of 404-ing and being
+    // discarded.
+    const idRemap = new Map<string, string>();
+
+    const runOp = async (op: OutboxOp) => {
       switch (op.kind) {
-        case 'client.create':
-          return apiFetch('/clients', { method: 'POST', accessToken, body: JSON.stringify(op.payload) });
+        case 'client.create': {
+          const data = await apiFetch('/clients', { method: 'POST', accessToken, body: JSON.stringify(op.payload) });
+          if (op.tempId && data?.client?.id) idRemap.set(op.tempId, data.client.id);
+          return data;
+        }
         case 'client.update':
-          return apiFetch(`/clients/${op.id}`, { method: 'PUT', accessToken, body: JSON.stringify(op.payload) });
+          return apiFetch(`/clients/${idRemap.get(op.id) || op.id}`, { method: 'PUT', accessToken, body: JSON.stringify(op.payload) });
         case 'client.delete':
-          return apiFetch(`/clients/${op.id}`, { method: 'DELETE', accessToken });
+          return apiFetch(`/clients/${idRemap.get(op.id) || op.id}`, { method: 'DELETE', accessToken });
         case 'product.create':
           return apiFetch('/products', { method: 'POST', accessToken, body: JSON.stringify(op.payload) });
         case 'product.update':

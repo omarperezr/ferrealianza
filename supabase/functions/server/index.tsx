@@ -112,7 +112,7 @@ app.get("/make-server-745f9946/health", (c) => {
 // Sign up (create new user)
 app.post("/make-server-745f9946/auth/signup", async (c) => {
   try {
-    const { email, password, name, role } = await c.req.json();
+    const { email, password, name } = await c.req.json();
 
     if (!email || !password || !name) {
       return c.json({ error: 'Email, contraseña y nombre son requeridos' }, 400);
@@ -122,7 +122,10 @@ app.post("/make-server-745f9946/auth/signup", async (c) => {
     const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
-      user_metadata: { name, role: role || 'user' },
+      // Public self-registration always creates a seller. The role is NOT taken
+      // from the request body — otherwise anyone could sign themselves up as an
+      // admin. Admins are created only through the admin-only POST /users route.
+      user_metadata: { name, role: 'user' },
       // Automatically confirm the user's email since an email server hasn't been configured.
       email_confirm: true
     });
