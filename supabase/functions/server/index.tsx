@@ -172,12 +172,6 @@ app.post("/make-server-745f9946/auth/signin", async (c) => {
   }
 });
 
-// Get current session
-app.get("/make-server-745f9946/auth/session", authMiddleware, async (c) => {
-  const user = c.get('user');
-  return c.json({ user });
-});
-
 // Sign out
 app.post("/make-server-745f9946/auth/signout", authMiddleware, async (c) => {
   const accessToken = c.req.header('Authorization')?.split(' ')[1];
@@ -297,23 +291,6 @@ app.get("/make-server-745f9946/products", authMiddleware, async (c) => {
   } catch (error) {
     console.log(`Error al obtener productos: ${error}`);
     return c.json({ error: 'Error al obtener productos' }, 500);
-  }
-});
-
-// Get single product
-app.get("/make-server-745f9946/products/:code{.+}", authMiddleware, async (c) => {
-  try {
-    const code = c.req.param('code');
-    const product = await kv.get(`product:${code}`);
-
-    if (!product) {
-      return c.json({ error: 'Producto no encontrado' }, 404);
-    }
-
-    return c.json({ product });
-  } catch (error) {
-    console.log(`Error al obtener producto: ${error}`);
-    return c.json({ error: 'Error al obtener producto' }, 500);
   }
 });
 
@@ -665,19 +642,25 @@ app.post("/make-server-745f9946/clients/bulk", authMiddleware, adminMiddleware, 
       .like('key', 'client:%');
     if (fetchError) throw new Error(fetchError.message);
 
+    // RIFs arrive in mixed formats ("J-31762898-5" vs "J317628985"); match on
+    // uppercase alphanumerics only so both spellings hit the same client.
+    const rifKeyOf = (rif: unknown) => String(rif).toUpperCase().replace(/[^A-Z0-9]/g, '');
+
     const existingByRif = new Map<string, any>();
     for (const row of (existingRows || [])) {
-      if (row.value?.rif) existingByRif.set(String(row.value.rif).trim().toUpperCase(), row.value);
+      if (row.value?.rif) existingByRif.set(rifKeyOf(row.value.rif), row.value);
     }
 
-    const toUpsert: { key: string; value: any }[] = [];
+    // Keyed by kv key so a RIF repeated within one upload overwrites its own
+    // entry instead of creating a duplicate (or a same-key upsert conflict).
+    const toUpsert = new Map<string, any>();
     let created = 0;
     let updated = 0;
     let skipped = 0;
 
     for (const row of clients) {
       if (!row.name || !row.rif) { skipped++; continue; }
-      const rifKey = String(row.rif).trim().toUpperCase();
+      const rifKey = rifKeyOf(row.rif);
       const existing = existingByRif.get(rifKey);
 
       if (existing) {
@@ -690,7 +673,8 @@ app.post("/make-server-745f9946/clients/bulk", authMiddleware, adminMiddleware, 
           phone: row.phone || existing.phone || '',
           updatedAt: new Date().toISOString(),
         };
-        toUpsert.push({ key: `client:${existing.id}`, value: normalized });
+        toUpsert.set(`client:${existing.id}`, normalized);
+        existingByRif.set(rifKey, normalized);
         updated++;
       } else {
         const id = `${Date.now()}-import-${Math.random().toString(36).slice(2)}`;
@@ -707,17 +691,19 @@ app.post("/make-server-745f9946/clients/bulk", authMiddleware, adminMiddleware, 
           allVendors: true,
           createdAt: new Date().toISOString(),
         };
-        toUpsert.push({ key: `client:${id}`, value: normalized });
+        toUpsert.set(`client:${id}`, normalized);
+        existingByRif.set(rifKey, normalized);
         created++;
       }
     }
 
+    const entries = [...toUpsert.entries()].map(([key, value]) => ({ key, value }));
     const CHUNK = 500;
-    for (let i = 0; i < toUpsert.length; i += CHUNK) {
-      const batch = toUpsert.slice(i, i + CHUNK);
+    for (let i = 0; i < entries.length; i += CHUNK) {
+      const batch = entries.slice(i, i + CHUNK);
       const { error: upsertError } = await supabase
         .from('kv_store_745f9946')
-        .upsert(batch.map(({ key, value }) => ({ key, value })));
+        .upsert(batch);
       if (upsertError) throw new Error(upsertError.message);
     }
 
@@ -834,66 +820,6 @@ app.delete("/make-server-745f9946/clients/:id", authMiddleware, async (c) => {
   } catch (error) {
     console.log(`Error al eliminar cliente: ${error}`);
     return c.json({ error: 'Error al eliminar cliente' }, 500);
-  }
-});
-
-// ===== ORDER ROUTES =====
-
-// Create order
-app.post("/make-server-745f9946/orders", authMiddleware, async (c) => {
-  try {
-    const user = c.get('user');
-    const { items, discount, tax, clientId } = await c.req.json();
-
-    if (!items || items.length === 0) {
-      return c.json({ error: 'El pedido debe contener al menos un producto' }, 400);
-    }
-
-    let client = null;
-    if (clientId) {
-      client = await kv.get(`client:${clientId}`);
-    }
-
-    const orderId = `order:${Date.now()}-${user.id}`;
-    const order = {
-      id: orderId,
-      userId: user.id,
-      userName: user.user_metadata?.name || user.email,
-      clientId: client?.id || null,
-      clientName: client?.name || null,
-      clientRif: client?.rif || null,
-      clientAddress: client?.address || null,
-      items,
-      discount: discount || 0,
-      tax: tax || 0,
-      createdAt: new Date().toISOString()
-    };
-
-    await kv.set(orderId, order);
-    return c.json({ order });
-  } catch (error) {
-    console.log(`Error al crear pedido: ${error}`);
-    return c.json({ error: 'Error al crear pedido' }, 500);
-  }
-});
-
-// Get user orders
-app.get("/make-server-745f9946/orders", authMiddleware, async (c) => {
-  try {
-    const user = c.get('user');
-    const userRole = user.user_metadata?.role || 'user';
-
-    const allOrders = await kv.getByPrefix('order:');
-
-    // Admins can see all orders, users only see their own
-    const orders = userRole === 'admin'
-      ? allOrders
-      : allOrders.filter((order: any) => order.userId === user.id);
-
-    return c.json({ orders });
-  } catch (error) {
-    console.log(`Error al obtener pedidos: ${error}`);
-    return c.json({ error: 'Error al obtener pedidos' }, 500);
   }
 });
 

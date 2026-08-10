@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ArrowDownUp, X } from 'lucide-react';
 import {
   SORT_FIELDS,

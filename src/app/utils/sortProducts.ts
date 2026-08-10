@@ -17,18 +17,6 @@ export type SortOption =
   | 'price-asc'
   | 'price-desc';
 
-// Spanish labels for the "Ordenar por" dropdown.
-export const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: 'name-asc', label: 'Nombre (A-Z)' },
-  { value: 'name-desc', label: 'Nombre (Z-A)' },
-  { value: 'code-asc', label: 'Código (A-Z)' },
-  { value: 'code-desc', label: 'Código (Z-A)' },
-  { value: 'category-asc', label: 'Categoría (A-Z)' },
-  { value: 'category-desc', label: 'Categoría (Z-A)' },
-  { value: 'price-asc', label: 'Precio (menor a mayor)' },
-  { value: 'price-desc', label: 'Precio (mayor a menor)' },
-];
-
 export type SortField = 'name' | 'code' | 'category' | 'price';
 
 // Per-field metadata for the multi-key sort control: a label plus the Spanish

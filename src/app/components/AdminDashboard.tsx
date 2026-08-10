@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { apiFetch } from '../utils/api';
 import {
+  Product,
   getProducts,
   getClients,
   getCachedProducts,
@@ -60,16 +61,6 @@ import {
 import { usePersistentState } from '../utils/usePersistentState';
 import { withRetry, timeoutSignal } from '../utils/retry';
 
-interface Product {
-  code: string;
-  name: string;
-  category: string;
-  amountPerPackage: string;
-  price: number;
-  imageUrl: string;
-  stock: number;
-  hidden?: boolean;
-}
 
 export function AdminDashboard() {
   const { accessToken, signOut } = useAuth();
@@ -221,12 +212,19 @@ export function AdminDashboard() {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
 
-      // Find header row: look for a row containing 'Rif' or 'RIF' or 'rif'
+      // Find header row: look for a row containing a RIF column. Headers are
+      // matched case- and accent-insensitively ("Teléfono" == "TELEFONO").
+      const norm = (v: any) =>
+        String(v || '')
+          .trim()
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
       let headerIdx = -1;
       let headers: string[] = [];
       for (let i = 0; i < Math.min(rows.length, 5); i++) {
-        const row = rows[i].map((v: any) => String(v || '').trim());
-        if (row.some((h) => /rif/i.test(h))) {
+        const row = (rows[i] || []).map(norm);
+        if (row.some((h) => /rif/.test(h))) {
           headerIdx = i;
           headers = row;
           break;
@@ -239,11 +237,11 @@ export function AdminDashboard() {
       }
 
       const col = (name: RegExp) => headers.findIndex((h) => name.test(h));
-      const iName = col(/empresa|razon|nombre/i);
-      const iRif = col(/rif/i);
-      const iAddress = col(/direcci/i);
-      const iPhone = col(/tel[eé]fono|tel\./i);
-      const iEmail = col(/correo|email/i);
+      const iName = col(/empresa|razon|nombre/);
+      const iRif = col(/rif/);
+      const iAddress = col(/direcci/);
+      const iPhone = col(/telefono|tel\./);
+      const iEmail = col(/correo|email/);
 
       const clients: any[] = [];
       for (let i = headerIdx + 1; i < rows.length; i++) {

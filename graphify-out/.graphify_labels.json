@@ -1,0 +1,23 @@
+{
+  "0": "AdminDashboard.tsx",
+  "1": "sidebar.tsx",
+  "2": "cn",
+  "3": "ClientControls.tsx",
+  "5": "package.json",
+  "7": "compilerOptions",
+  "8": "xlsxImages.ts",
+  "10": "Sistema de Gestión de Inventario - FerreAlianza",
+  "14": "kv_store.tsx",
+  "15": "dependencies",
+  "18": "pdfImport.ts",
+  "23": "compilerOptions",
+  "24": "ErrorBoundary",
+  "29": "vite-env.d.ts",
+  "84": "sw.js",
+  "85": "script_excel_extract.py",
+  "88": "vite.config.ts",
+  "89": "ATTRIBUTIONS.md",
+  "90": "postcss.config.mjs",
+  "91": "README.md",
+  "94": "CLAUDE.md"
+}
