@@ -313,7 +313,7 @@ export function SalesPanel() {
     // ---- Header ----
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
-    doc.text("FERRE ALIANZA IMPORT, C.A.", 14, 14);
+    doc.text("FERREALIANZA IMPORT, C.A.", 14, 14);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.text("PRESUPUESTO / COTIZACIÓN", 14, 21);
@@ -500,7 +500,7 @@ export function SalesPanel() {
   };
 
   const exportToText = () => {
-    let text = "FERRE ALIANZA IMPORT, C.A.\n";
+    let text = "FERREALIANZA IMPORT, C.A.\n";
     text += "PRESUPUESTO\n";
     text += `Fecha: ${new Date().toLocaleDateString("es-ES")}\n`;
     text += `Vendedor: ${user?.user_metadata?.name || "—"}\n`;
