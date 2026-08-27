@@ -1,8 +1,8 @@
 {
   "0": "AdminDashboard.tsx",
-  "1": "ClientFormDialog.tsx",
-  "2": "ProductSortControl.tsx",
-  "3": "SalesPanel.tsx",
+  "1": "sidebar.tsx",
+  "2": "cn",
+  "3": "ClientControls.tsx",
   "5": "package.json",
   "7": "compilerOptions",
   "8": "xlsxImages.ts",

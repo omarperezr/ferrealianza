@@ -1,11 +1,11 @@
 # Graph Report - ferrealianza  (2026-08-27)
 
 ## Corpus Check
-- 49 files · ~32,190 words
+- 49 files · ~32,280 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 342 nodes · 720 edges · 21 communities
+- 345 nodes · 724 edges · 21 communities
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 6 edges (avg confidence: 0.55)
 - Token cost: 0 input · 0 output
 
@@ -16,9 +16,9 @@
 
 ## Community Hubs (Navigation)
 - AdminDashboard.tsx
-- ClientFormDialog.tsx
-- ProductSortControl.tsx
-- SalesPanel.tsx
+- sidebar.tsx
+- cn
+- ClientControls.tsx
 - package.json
 - compilerOptions
 - xlsxImages.ts
@@ -33,7 +33,7 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `AdminDashboard()` - 27 edges
-2. `SalesPanel()` - 18 edges
+2. `SalesPanel()` - 19 edges
 3. `apiFetch()` - 18 edges
 4. `compilerOptions` - 18 edges
 5. `useAuth()` - 17 edges
@@ -61,20 +61,20 @@
 ## Communities (21 total, 0 thin omitted)
 
 ### Community 0 - "AdminDashboard.tsx"
-Cohesion: 0.16
-Nodes (37): AdminDashboard(), ClientFormDialog(), ClientVendorsDialog(), SalesPanel(), apiFetch(), deleteClient(), deleteClients(), deleteProduct() (+29 more)
-
-### Community 1 - "ClientFormDialog.tsx"
 Cohesion: 0.18
-Nodes (19): ClientFormDialogProps, empty, Props, Vendor, Client, Button, ButtonProps, buttonVariants (+11 more)
+Nodes (33): AdminDashboard(), ClientFormDialog(), ClientVendorsDialog(), apiFetch(), deleteClient(), deleteClients(), deleteProduct(), deleteProducts() (+25 more)
 
-### Community 2 - "ProductSortControl.tsx"
-Cohesion: 0.29
-Nodes (12): ProductSortControl(), Props, compareBy(), dirOf(), fieldOf(), SORT_FIELDS, SortableProduct, SortField (+4 more)
+### Community 1 - "sidebar.tsx"
+Cohesion: 0.15
+Nodes (22): ClientFormDialogProps, empty, Props, Vendor, Client, Button, ButtonProps, buttonVariants (+14 more)
 
-### Community 3 - "SalesPanel.tsx"
-Cohesion: 0.11
-Nodes (31): ClientFilterControl(), ClientSortControl(), FilterProps, SortProps, TRI_OPTIONS, TRI_ROWS, Vendor, CartItem (+23 more)
+### Community 2 - "cn"
+Cohesion: 0.13
+Nodes (27): ProductSortControl(), Props, CartItem, clampPercent(), DARK, GOLD, loadImageAsDataUrl(), loadPersistedCart() (+19 more)
+
+### Community 3 - "ClientControls.tsx"
+Cohesion: 0.18
+Nodes (20): ClientFilterControl(), ClientSortControl(), FilterProps, SortProps, TRI_OPTIONS, TRI_ROWS, Vendor, activeFilterCount() (+12 more)
 
 ### Community 5 - "package.json"
 Cohesion: 0.06
@@ -121,22 +121,22 @@ Cohesion: 0.50
 Nodes (3): Behavioral guidelines, graphify, Orchestrated implementation workflow (token-efficient)
 
 ## Knowledge Gaps
-- **108 isolated node(s):** `name`, `private`, `version`, `type`, `build` (+103 more)
+- **110 isolated node(s):** `name`, `private`, `version`, `type`, `build` (+105 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `AdminDashboard()` connect `AdminDashboard.tsx` to `SalesPanel.tsx`, `xlsxImages.ts`, `kv_store.tsx`, `dependencies`, `pdfImport.ts`, `ErrorBoundary`?**
-  _High betweenness centrality (0.250) - this node is a cross-community bridge._
+- **Why does `AdminDashboard()` connect `AdminDashboard.tsx` to `cn`, `ClientControls.tsx`, `xlsxImages.ts`, `kv_store.tsx`, `dependencies`, `pdfImport.ts`, `ErrorBoundary`?**
+  _High betweenness centrality (0.248) - this node is a cross-community bridge._
 - **Why does `dependencies` connect `dependencies` to `package.json`?**
-  _High betweenness centrality (0.228) - this node is a cross-community bridge._
-- **Why does `xlsx` connect `dependencies` to `AdminDashboard.tsx`, `xlsxImages.ts`?**
-  _High betweenness centrality (0.169) - this node is a cross-community bridge._
+  _High betweenness centrality (0.227) - this node is a cross-community bridge._
+- **Why does `xlsx` connect `dependencies` to `AdminDashboard.tsx`, `xlsxImages.ts`, `cn`?**
+  _High betweenness centrality (0.168) - this node is a cross-community bridge._
 - **What connects `name`, `private`, `version` to the rest of the system?**
-  _108 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `SalesPanel.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.11428571428571428 - nodes in this community are weakly interconnected._
+  _110 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `cn` be split into smaller, more focused modules?**
+  _Cohesion score 0.12701612903225806 - nodes in this community are weakly interconnected._
 - **Should `package.json` be split into smaller, more focused modules?**
   _Cohesion score 0.06451612903225806 - nodes in this community are weakly interconnected._
 - **Should `compilerOptions` be split into smaller, more focused modules?**

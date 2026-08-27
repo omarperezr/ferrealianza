@@ -34,7 +34,6 @@ import {
   Share2,
   ChevronDown,
 } from "lucide-react";
-import logoImage from "../../imports/image.png";
 import {
   SortOption,
   filterProducts,
@@ -51,22 +50,6 @@ import { ClientSortControl, ClientFilterControl } from "./ClientControls";
 import { usePersistentState } from "../utils/usePersistentState";
 import { ProductSortControl } from "./ProductSortControl";
 
-const loadImageAsDataUrl = (src: string): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      ctx?.drawImage(img, 0, 0);
-      resolve(canvas.toDataURL("image/png"));
-    };
-    img.onerror = reject;
-    img.src = src;
-  });
-
 interface Product {
   code: string;
   name: string;
@@ -82,8 +65,6 @@ interface CartItem extends Product {
 }
 
 // Brand colors for the PDF
-const GOLD: [number, number, number] = [201, 162, 39];
-const DARK: [number, number, number] = [26, 29, 33];
 
 // localStorage key for the persisted cart (survives page refreshes).
 const CART_STORAGE_KEY = "ferrealianza-cart";
@@ -200,7 +181,6 @@ export function SalesPanel() {
       import("jspdf").catch(() => {});
       import("jspdf-autotable").catch(() => {});
       import("xlsx").catch(() => {});
-      fetch(logoImage).catch(() => {}); // cache logo for the offline PDF header
     };
     const idle = (window as any).requestIdleCallback;
     if (idle) idle(warm);
@@ -325,37 +305,25 @@ export function SalesPanel() {
     const pageH = doc.internal.pageSize.getHeight();
     const money = (n: number) => `$${n.toFixed(2)}`;
 
-    // ---- Header band ----
-    doc.setFillColor(...DARK);
-    doc.rect(0, 0, pageW, 32, "F");
-    doc.setFillColor(...GOLD);
-    doc.rect(0, 32, pageW, 1.6, "F");
+    // Monochrome layout (printed on paper): no fills, black text, sections
+    // separated by plain rules only.
+    doc.setTextColor(0);
+    doc.setDrawColor(0);
 
-    try {
-      const logoDataUrl = await loadImageAsDataUrl(logoImage);
-      doc.addImage(logoDataUrl, "PNG", 14, 6, 20, 20);
-    } catch {
-      // Continue without the logo if it can't be loaded.
-    }
-
-    doc.setTextColor(255, 255, 255);
+    // ---- Header ----
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
-    doc.text("FERRE ALIANZA IMPORT, C.A.", 40, 14);
+    doc.text("FERRE ALIANZA IMPORT, C.A.", 14, 14);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.setTextColor(...GOLD);
-    doc.text("PRESUPUESTO / COTIZACIÓN", 40, 21);
-    doc.setTextColor(200, 200, 200);
+    doc.text("PRESUPUESTO / COTIZACIÓN", 14, 21);
     doc.setFontSize(8);
-    doc.text("RIF: J-50137897-5", 40, 27);
+    doc.text("RIF: J-50137897-5", 14, 27);
 
-    // Document number + date (right aligned in the band)
+    // Document number + date (right aligned)
     const docNumber = `N° ${new Date().getTime().toString().slice(-6)}`;
-    doc.setTextColor(255, 255, 255);
     doc.setFontSize(9);
     doc.text(docNumber, pageW - 14, 14, { align: "right" });
-    doc.setTextColor(200, 200, 200);
     doc.setFontSize(8);
     doc.text(
       `Fecha: ${new Date().toLocaleDateString("es-ES")}`,
@@ -364,13 +332,15 @@ export function SalesPanel() {
       { align: "right" },
     );
 
-    // ---- Client / vendor info box ----
-    let y = 44;
-    doc.setDrawColor(225, 225, 225);
-    doc.setFillColor(248, 248, 246);
-    doc.roundedRect(14, y, pageW - 28, 30, 2, 2, "FD");
+    doc.setLineWidth(0.6);
+    doc.line(14, 32, pageW - 14, 32);
 
-    doc.setTextColor(...DARK);
+    // ---- Client / vendor info box ----
+    let y = 40;
+    doc.setLineWidth(0.3);
+    doc.rect(14, y, pageW - 28, 30);
+    doc.line(pageW / 2, y, pageW / 2, y + 30);
+
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
     doc.text("CLIENTE", 20, y + 7);
@@ -378,7 +348,6 @@ export function SalesPanel() {
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.setTextColor(60, 60, 60);
     doc.text(selectedClient.name, 20, y + 14);
     doc.text(`RIF: ${selectedClient.rif}`, 20, y + 20);
     const address = doc.splitTextToSize(
@@ -409,14 +378,22 @@ export function SalesPanel() {
       head: [["Código", "Producto", "Cant/Paq", "Cant", "Precio", "Total"]],
       body: tableData,
       theme: "grid",
-      styles: { fontSize: 8, cellPadding: 2.5, lineColor: [230, 230, 230] },
+      styles: {
+        fontSize: 8,
+        cellPadding: 2.5,
+        textColor: 0,
+        fillColor: false,
+        lineColor: 0,
+        lineWidth: 0.2,
+      },
       headStyles: {
-        fillColor: DARK,
-        textColor: GOLD,
+        fillColor: false,
+        textColor: 0,
         fontStyle: "bold",
         halign: "left",
+        lineWidth: 0.4,
       },
-      alternateRowStyles: { fillColor: [250, 249, 246] },
+      alternateRowStyles: { fillColor: false },
       columnStyles: {
         3: { halign: "center" },
         4: { halign: "right" },
@@ -442,26 +419,25 @@ export function SalesPanel() {
       ty += 6;
     };
 
-    doc.setTextColor(60, 60, 60);
     doc.setFontSize(9);
     row("Subtotal:", money(subtotal));
     row(`Descuento (${discount}%):`, `-${money(discountAmount)}`);
     row(`Impuesto (${tax}%):`, `+${money(taxAmount)}`);
 
-    // Total highlighted
-    ty += 1;
-    doc.setFillColor(...DARK);
-    doc.roundedRect(boxX - 4, ty - 5, boxW + 8, 10, 1.5, 1.5, "F");
-    doc.setTextColor(...GOLD);
+    // Total set apart by rules above and below
+    doc.setLineWidth(0.5);
+    doc.line(boxX - 4, ty - 3, boxX + boxW + 4, ty - 3);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
-    doc.text("TOTAL:", boxX, ty + 1.5);
-    doc.text(money(total), boxX + boxW, ty + 1.5, { align: "right" });
+    doc.text("TOTAL:", boxX, ty + 3);
+    doc.text(money(total), boxX + boxW, ty + 3, { align: "right" });
+    doc.line(boxX - 4, ty + 6, boxX + boxW + 4, ty + 6);
 
     // ---- Footer ----
+    doc.setLineWidth(0.3);
+    doc.line(14, pageH - 15, pageW - 14, pageH - 15);
     doc.setFont("helvetica", "italic");
     doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
     doc.text(
       "Gracias por su preferencia · FerreAlianza Import, C.A.",
       pageW / 2,
