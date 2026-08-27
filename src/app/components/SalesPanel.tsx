@@ -64,8 +64,6 @@ interface CartItem extends Product {
   quantity: number;
 }
 
-// Brand colors for the PDF
-
 // localStorage key for the persisted cart (survives page refreshes).
 const CART_STORAGE_KEY = "ferrealianza-cart";
 
