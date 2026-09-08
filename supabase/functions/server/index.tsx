@@ -7,6 +7,9 @@ import * as kv from "./kv_store.tsx";
 const app = new Hono();
 
 // Create Supabase clients
+// Surface the real cause to the client so failures are actionable ("Error al X: <detalle>").
+const errMsg = (e: unknown) => (e as { message?: string })?.message ?? String(e);
+
 const getServiceClient = () => createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -138,7 +141,7 @@ app.post("/make-server-745f9946/auth/signup", async (c) => {
     return c.json({ user: data.user });
   } catch (error) {
     console.log(`Error en registro de usuario: ${error}`);
-    return c.json({ error: 'Error en el servidor al registrar usuario' }, 500);
+    return c.json({ error: `Error en el servidor al registrar usuario: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -168,7 +171,7 @@ app.post("/make-server-745f9946/auth/signin", async (c) => {
     });
   } catch (error) {
     console.log(`Error en inicio de sesión: ${error}`);
-    return c.json({ error: 'Error en el servidor al iniciar sesión' }, 500);
+    return c.json({ error: `Error en el servidor al iniciar sesión: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -194,7 +197,7 @@ app.get("/make-server-745f9946/users", authMiddleware, adminMiddleware, async (c
     const { data, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
     if (error) {
       console.log(`Error al listar usuarios: ${error.message}`);
-      return c.json({ error: 'Error al obtener usuarios' }, 500);
+      return c.json({ error: `Error al obtener usuarios: ${errMsg(error)}` }, 500);
     }
     const users = (data?.users || []).map((u: any) => ({
       id: u.id,
@@ -206,7 +209,7 @@ app.get("/make-server-745f9946/users", authMiddleware, adminMiddleware, async (c
     return c.json({ users });
   } catch (error) {
     console.log(`Error al obtener usuarios: ${error}`);
-    return c.json({ error: 'Error al obtener usuarios' }, 500);
+    return c.json({ error: `Error al obtener usuarios: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -248,7 +251,7 @@ app.post("/make-server-745f9946/users", authMiddleware, adminMiddleware, async (
     });
   } catch (error) {
     console.log(`Error al crear usuario: ${error}`);
-    return c.json({ error: 'Error en el servidor al crear usuario' }, 500);
+    return c.json({ error: `Error en el servidor al crear usuario: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -272,7 +275,7 @@ app.delete("/make-server-745f9946/users/:id", authMiddleware, adminMiddleware, a
     return c.json({ message: 'Usuario eliminado exitosamente' });
   } catch (error) {
     console.log(`Error al eliminar usuario: ${error}`);
-    return c.json({ error: 'Error en el servidor al eliminar usuario' }, 500);
+    return c.json({ error: `Error en el servidor al eliminar usuario: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -290,7 +293,7 @@ app.get("/make-server-745f9946/products", authMiddleware, async (c) => {
     return c.json({ products: visible });
   } catch (error) {
     console.log(`Error al obtener productos: ${error}`);
-    return c.json({ error: 'Error al obtener productos' }, 500);
+    return c.json({ error: `Error al obtener productos: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -327,7 +330,7 @@ app.post("/make-server-745f9946/products", authMiddleware, adminMiddleware, asyn
     return c.json({ product: newProduct });
   } catch (error) {
     console.log(`Error al crear producto: ${error}`);
-    return c.json({ error: 'Error al crear producto' }, 500);
+    return c.json({ error: `Error al crear producto: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -439,7 +442,7 @@ app.post("/make-server-745f9946/products/bulk", authMiddleware, adminMiddleware,
     return c.json({ created, updated, skipped });
   } catch (error) {
     console.log(`Error al importar productos en lote: ${error}`);
-    return c.json({ error: 'Error al importar productos en lote' }, 500);
+    return c.json({ error: `Error al importar productos en lote: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -472,7 +475,7 @@ app.put("/make-server-745f9946/products/:code{.+}", authMiddleware, adminMiddlew
     return c.json({ product: updatedProduct });
   } catch (error) {
     console.log(`Error al actualizar producto: ${error}`);
-    return c.json({ error: 'Error al actualizar producto' }, 500);
+    return c.json({ error: `Error al actualizar producto: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -496,7 +499,7 @@ app.delete("/make-server-745f9946/products", authMiddleware, adminMiddleware, as
     return c.json({ message: 'Productos eliminados exitosamente', count: codes.length });
   } catch (error) {
     console.log(`Error al eliminar productos en lote: ${error}`);
-    return c.json({ error: 'Error al eliminar productos en lote' }, 500);
+    return c.json({ error: `Error al eliminar productos en lote: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -514,7 +517,7 @@ app.delete("/make-server-745f9946/products/:code{.+}", authMiddleware, adminMidd
     return c.json({ message: 'Producto eliminado exitosamente' });
   } catch (error) {
     console.log(`Error al eliminar producto: ${error}`);
-    return c.json({ error: 'Error al eliminar producto' }, 500);
+    return c.json({ error: `Error al eliminar producto: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -552,7 +555,7 @@ app.post("/make-server-745f9946/upload-image", authMiddleware, adminMiddleware, 
     return c.json({ imageUrl: urlData?.signedUrl });
   } catch (error) {
     console.log(`Error al procesar subida de imagen: ${error}`);
-    return c.json({ error: 'Error al procesar subida de imagen' }, 500);
+    return c.json({ error: `Error al procesar subida de imagen: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -565,7 +568,7 @@ app.get("/make-server-745f9946/vendors", authMiddleware, adminMiddleware, async 
     const { data, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
     if (error) {
       console.log(`Error al listar vendedores: ${error.message}`);
-      return c.json({ error: 'Error al obtener vendedores' }, 500);
+      return c.json({ error: `Error al obtener vendedores: ${errMsg(error)}` }, 500);
     }
     const vendors = (data?.users || [])
       .filter((u: any) => (u.user_metadata?.role || 'user') !== 'admin')
@@ -577,7 +580,7 @@ app.get("/make-server-745f9946/vendors", authMiddleware, adminMiddleware, async 
     return c.json({ vendors });
   } catch (error) {
     console.log(`Error al obtener vendedores: ${error}`);
-    return c.json({ error: 'Error al obtener vendedores' }, 500);
+    return c.json({ error: `Error al obtener vendedores: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -621,7 +624,7 @@ app.post("/make-server-745f9946/clients", authMiddleware, async (c) => {
     return c.json({ client });
   } catch (error) {
     console.log(`Error al crear cliente: ${error}`);
-    return c.json({ error: 'Error al crear cliente' }, 500);
+    return c.json({ error: `Error al crear cliente: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -636,11 +639,19 @@ app.post("/make-server-745f9946/clients/bulk", authMiddleware, adminMiddleware, 
 
     const supabase = getServiceClient();
 
-    const { data: existingRows, error: fetchError } = await supabase
-      .from('kv_store_745f9946')
-      .select('key, value')
-      .like('key', 'client:%');
-    if (fetchError) throw new Error(fetchError.message);
+    // PostgREST caps one select at 1000 rows; page through so a large client
+    // base still matches by RIF instead of silently creating duplicates.
+    const existingRows: { key: string; value: any }[] = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error: fetchError } = await supabase
+        .from('kv_store_745f9946')
+        .select('key, value')
+        .like('key', 'client:%')
+        .range(from, from + 999);
+      if (fetchError) throw new Error(fetchError.message);
+      existingRows.push(...(data || []));
+      if (!data || data.length < 1000) break;
+    }
 
     // RIFs arrive in mixed formats ("J-31762898-5" vs "J317628985"); match on
     // uppercase alphanumerics only so both spellings hit the same client.
@@ -710,7 +721,7 @@ app.post("/make-server-745f9946/clients/bulk", authMiddleware, adminMiddleware, 
     return c.json({ created, updated, skipped });
   } catch (error) {
     console.log(`Error al importar clientes en lote: ${error}`);
-    return c.json({ error: 'Error al importar clientes en lote' }, 500);
+    return c.json({ error: `Error al importar clientes en lote: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -730,7 +741,7 @@ app.delete("/make-server-745f9946/clients", authMiddleware, adminMiddleware, asy
     return c.json({ message: 'Clientes eliminados exitosamente', count: ids.length });
   } catch (error) {
     console.log(`Error al eliminar clientes en lote: ${error}`);
-    return c.json({ error: 'Error al eliminar clientes en lote' }, 500);
+    return c.json({ error: `Error al eliminar clientes en lote: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -749,7 +760,7 @@ app.get("/make-server-745f9946/clients", authMiddleware, async (c) => {
     return c.json({ clients });
   } catch (error) {
     console.log(`Error al obtener clientes: ${error}`);
-    return c.json({ error: 'Error al obtener clientes' }, 500);
+    return c.json({ error: `Error al obtener clientes: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -791,7 +802,7 @@ app.put("/make-server-745f9946/clients/:id", authMiddleware, async (c) => {
     return c.json({ client: updatedClient });
   } catch (error) {
     console.log(`Error al actualizar cliente: ${error}`);
-    return c.json({ error: 'Error al actualizar cliente' }, 500);
+    return c.json({ error: `Error al actualizar cliente: ${errMsg(error)}` }, 500);
   }
 });
 
@@ -819,7 +830,7 @@ app.delete("/make-server-745f9946/clients/:id", authMiddleware, async (c) => {
     return c.json({ message: 'Cliente eliminado exitosamente' });
   } catch (error) {
     console.log(`Error al eliminar cliente: ${error}`);
-    return c.json({ error: 'Error al eliminar cliente' }, 500);
+    return c.json({ error: `Error al eliminar cliente: ${errMsg(error)}` }, 500);
   }
 });
 

@@ -51,6 +51,7 @@ import {
 } from '../utils/sortProducts';
 import { ProductSortControl } from './ProductSortControl';
 import { ClientSortControl, ClientFilterControl } from './ClientControls';
+import { parseClientRows } from '../utils/clientsImport';
 import {
   ClientSortOption,
   ClientFilters,
@@ -207,60 +208,23 @@ export function AdminDashboard() {
     try {
       toast.loading('Leyendo Excel de clientes...', { id: 'import-clients' });
       const XLSX = await import('xlsx');
-      const data = await file.arrayBuffer();
-      const wb = XLSX.read(data);
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
-
-      // Find header row: look for a row containing a RIF column. Headers are
-      // matched case- and accent-insensitively ("Teléfono" == "TELEFONO").
-      const norm = (v: any) =>
-        String(v || '')
-          .trim()
-          .toLowerCase()
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '');
-      let headerIdx = -1;
-      let headers: string[] = [];
-      for (let i = 0; i < Math.min(rows.length, 5); i++) {
-        const row = (rows[i] || []).map(norm);
-        if (row.some((h) => /rif/.test(h))) {
-          headerIdx = i;
-          headers = row;
-          break;
-        }
-      }
-
-      if (headerIdx === -1) {
-        toast.error('No se encontró fila de encabezados con columna RIF', { id: 'import-clients' });
+      const wb = XLSX.read(await file.arrayBuffer());
+      // raw:false keeps cells as displayed text (leading zeros in phones, etc.).
+      const sheets = wb.SheetNames.map((name) => ({
+        name,
+        rows: XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: false, defval: '' }) as unknown[][],
+      }));
+      const { clients, skipped, merged, sheet, error: parseError } = parseClientRows(sheets);
+      if (parseError) {
+        toast.error(parseError, { id: 'import-clients', duration: 10000 });
         return;
       }
 
-      const col = (name: RegExp) => headers.findIndex((h) => name.test(h));
-      const iName = col(/empresa|razon|nombre/);
-      const iRif = col(/rif/);
-      const iAddress = col(/direcci/);
-      const iPhone = col(/telefono|tel\./);
-      const iEmail = col(/correo|email/);
-
-      const clients: any[] = [];
-      for (let i = headerIdx + 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.every((v: any) => !v)) continue;
-        const name = String(row[iName] || '').trim();
-        const rif = String(row[iRif] || '').trim();
-        if (!name || !rif) continue;
-        clients.push({
-          name,
-          rif,
-          address: iAddress >= 0 ? String(row[iAddress] || '').trim() : '',
-          phone: iPhone >= 0 ? String(row[iPhone] || '').trim() : '',
-          email: iEmail >= 0 ? String(row[iEmail] || '').trim() : '',
-        });
-      }
-
       if (clients.length === 0) {
-        toast.error('No se encontraron clientes válidos en el Excel', { id: 'import-clients' });
+        toast.error(
+          `Hoja "${sheet}": ninguna fila con nombre y RIF (${skipped} fila(s) sin nombre o RIF)`,
+          { id: 'import-clients', duration: 10000 },
+        );
         return;
       }
 
@@ -270,13 +234,21 @@ export function AdminDashboard() {
         accessToken,
         body: JSON.stringify({ clients }),
       });
+      const excelNotes = [
+        skipped ? `${skipped} fila(s) sin nombre o RIF` : '',
+        merged ? `${merged} fila(s) con RIF repetido unidas` : '',
+      ].filter(Boolean);
       toast.success(
-        `Importación lista: ${result.created} creados, ${result.updated} actualizados, ${result.skipped} omitidos`,
-        { id: 'import-clients' },
+        `Importación lista: ${result.created} creados, ${result.updated} actualizados, ${result.skipped} omitidos` +
+          (excelNotes.length ? `. En el Excel: ${excelNotes.join(', ')}` : ''),
+        { id: 'import-clients', duration: 10000 },
       );
       loadClients();
     } catch (error: any) {
-      toast.error(error?.message || 'Error al importar clientes', { id: 'import-clients' });
+      toast.error(`Error al importar clientes: ${error?.message || error}`, {
+        id: 'import-clients',
+        duration: 10000,
+      });
     } finally {
       setImportingClients(false);
       e.target.value = '';
@@ -751,7 +723,7 @@ export function AdminDashboard() {
                   {importingClients ? 'Importando...' : 'Importar clientes de excel'}
                   <input
                     type="file"
-                    accept=".xlsx,.xls"
+                    accept=".xlsx,.xls,.csv"
                     className="hidden"
                     onChange={handleClientExcelImport}
                     disabled={importingClients}

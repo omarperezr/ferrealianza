@@ -34,6 +34,7 @@ import {
   Share2,
   ChevronDown,
 } from "lucide-react";
+import logoImage from "../../imports/image.png";
 import {
   SortOption,
   filterProducts,
@@ -49,6 +50,22 @@ import {
 import { ClientSortControl, ClientFilterControl } from "./ClientControls";
 import { usePersistentState } from "../utils/usePersistentState";
 import { ProductSortControl } from "./ProductSortControl";
+
+const loadImageAsDataUrl = (src: string): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx?.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
 
 interface Product {
   code: string;
@@ -179,6 +196,7 @@ export function SalesPanel() {
       import("jspdf").catch(() => {});
       import("jspdf-autotable").catch(() => {});
       import("xlsx").catch(() => {});
+      fetch(logoImage).catch(() => {}); // cache logo for the offline PDF header
     };
     const idle = (window as any).requestIdleCallback;
     if (idle) idle(warm);
@@ -309,14 +327,21 @@ export function SalesPanel() {
     doc.setDrawColor(0);
 
     // ---- Header ----
+    try {
+      const logoDataUrl = await loadImageAsDataUrl(logoImage);
+      doc.addImage(logoDataUrl, "PNG", 14, 6, 20, 20);
+    } catch {
+      // Continue without the logo if it can't be loaded.
+    }
+
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
-    doc.text("FERREALIANZA IMPORT, C.A.", 14, 14);
+    doc.text("FERREALIANZA IMPORT, C.A.", 40, 14);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.text("PRESUPUESTO / COTIZACIÓN", 14, 21);
+    doc.text("PRESUPUESTO / COTIZACIÓN", 40, 21);
     doc.setFontSize(8);
-    doc.text("RIF: J-50137897-5", 14, 27);
+    doc.text("RIF: J-50137897-5", 40, 27);
 
     // Document number + date (right aligned)
     const docNumber = `N° ${new Date().getTime().toString().slice(-6)}`;

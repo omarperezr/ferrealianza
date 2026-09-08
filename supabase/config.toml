@@ -1,1 +1,5 @@
 project_id = "cqisvtkqpacrlcjqfmxe"
+
+# Deploy with: supabase functions deploy make-server-745f9946
+[functions.make-server-745f9946]
+entrypoint = "./functions/server/index.tsx"
