@@ -27,6 +27,7 @@ import {
   Pencil,
   Trash2,
   FileSpreadsheet,
+  ImageMinus,
   LogOut,
   Package,
   Users,
@@ -99,6 +100,7 @@ export function AdminDashboard() {
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
   const [clientBulkDeleting, setClientBulkDeleting] = useState(false);
   const [importingClients, setImportingClients] = useState(false);
+  const [pruningImages, setPruningImages] = useState(false);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [clientSortBy, setClientSortBy] = usePersistentState<ClientSortOption[]>('admin-client-sort', ['name-asc']);
   const [clientFilters, setClientFilters] = usePersistentState<ClientFilters>('admin-client-filters', EMPTY_CLIENT_FILTERS);
@@ -272,6 +274,43 @@ export function AdminDashboard() {
 
     const data = await apiFetch('/upload-image', { method: 'POST', accessToken, body });
     return data.imageUrl;
+  };
+
+  // Free storage space: count orphan images, confirm, then delete in rounds
+  // of up to 1000 until the server reports none left.
+  const handlePruneImages = async () => {
+    setPruningImages(true);
+    try {
+      const mb = (b: number) => `${(b / 1024 / 1024).toFixed(1)} MB`;
+      toast.loading('Contando fotos huérfanas...', { id: 'prune' });
+      const dry = await apiFetch('/images/prune?dry=1', { method: 'POST', accessToken });
+      if (dry.orphans === 0) {
+        toast.success(`Sin fotos huérfanas (${dry.total} fotos, ${dry.used} en uso)`, { id: 'prune' });
+        return;
+      }
+      toast.dismiss('prune');
+      if (
+        !window.confirm(
+          `Se borrarán ${dry.orphans} fotos que ningún producto usa (${mb(dry.bytes)}). ` +
+            `Quedan ${dry.used} en uso. ¿Continuar?`,
+        )
+      )
+        return;
+      let deleted = 0;
+      let remaining = dry.orphans;
+      while (remaining > 0) {
+        toast.loading(`Borrando... ${deleted}/${dry.orphans}`, { id: 'prune' });
+        const r = await apiFetch('/images/prune', { method: 'POST', accessToken });
+        deleted += r.deleted;
+        remaining = r.remaining;
+        if (r.deleted === 0) break;
+      }
+      toast.success(`${deleted} fotos borradas, ~${mb(dry.bytes)} liberados`, { id: 'prune', duration: 10000 });
+    } catch (error: any) {
+      toast.error(`Error al borrar fotos huérfanas: ${error?.message || error}`, { id: 'prune', duration: 10000 });
+    } finally {
+      setPruningImages(false);
+    }
   };
 
   const toggleHidden = async (product: Product) => {
@@ -1000,6 +1039,15 @@ export function AdminDashboard() {
                 disabled={importing}
               />
             </label>
+          </Button>
+
+          <Button variant="outline" onClick={handlePruneImages} disabled={pruningImages || importing}>
+            {pruningImages ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <ImageMinus className="w-4 h-4 mr-2" />
+            )}
+            {pruningImages ? 'Limpiando...' : 'Borrar fotos huérfanas'}
           </Button>
         </div>
 

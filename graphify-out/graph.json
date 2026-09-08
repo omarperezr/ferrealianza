@@ -546,7 +546,7 @@
       "file_type": "code",
       "norm_label": "admindashboard()",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L66"
+      "source_location": "L67"
     },
     {
       "id": "src_app_components_clientformdialog_clientformdialog",
@@ -990,7 +990,7 @@
       "file_type": "code",
       "norm_label": "clientvisibleto()",
       "source_file": "supabase/functions/server/index.tsx",
-      "source_location": "L590"
+      "source_location": "L644"
     },
     {
       "id": "supabase_functions_server_index_errmsg",
@@ -4279,7 +4279,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L113",
+      "source_location": "L115",
       "weight": 1.0
     },
     {
@@ -4291,7 +4291,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L114",
+      "source_location": "L116",
       "weight": 1.0
     },
     {
@@ -4303,7 +4303,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L123",
+      "source_location": "L125",
       "weight": 1.0
     },
     {
@@ -4315,7 +4315,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L136",
+      "source_location": "L138",
       "weight": 1.0
     },
     {
@@ -4327,7 +4327,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L164",
+      "source_location": "L166",
       "weight": 1.0
     },
     {
@@ -4339,7 +4339,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L192",
+      "source_location": "L194",
       "weight": 1.0
     },
     {
@@ -4351,7 +4351,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L217",
+      "source_location": "L219",
       "weight": 1.0
     },
     {
@@ -4363,7 +4363,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L232",
+      "source_location": "L234",
       "weight": 1.0
     },
     {
@@ -4375,7 +4375,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L260",
+      "source_location": "L262",
       "weight": 1.0
     },
     {
@@ -4387,7 +4387,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L284",
+      "source_location": "L323",
       "weight": 1.0
     },
     {
@@ -4399,7 +4399,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L301",
+      "source_location": "L340",
       "weight": 1.0
     },
     {
@@ -4411,7 +4411,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L310",
+      "source_location": "L349",
       "weight": 1.0
     },
     {
@@ -4423,7 +4423,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L335",
+      "source_location": "L374",
       "weight": 1.0
     },
     {
@@ -4435,7 +4435,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L364",
+      "source_location": "L403",
       "weight": 1.0
     },
     {
@@ -4447,7 +4447,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L422",
+      "source_location": "L461",
       "weight": 1.0
     },
     {
@@ -4459,7 +4459,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L427",
+      "source_location": "L466",
       "weight": 1.0
     },
     {
@@ -4471,7 +4471,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L630",
+      "source_location": "L669",
       "weight": 1.0
     },
     {
@@ -4483,7 +4483,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L630",
+      "source_location": "L669",
       "weight": 1.0
     },
     {
@@ -4495,7 +4495,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L631",
+      "source_location": "L670",
       "weight": 1.0
     },
     {
@@ -4507,7 +4507,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L632",
+      "source_location": "L671",
       "weight": 1.0
     },
     {
@@ -4519,7 +4519,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L67",
+      "source_location": "L68",
       "weight": 1.0
     },
     {
@@ -4531,7 +4531,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L91",
+      "source_location": "L92",
       "weight": 1.0
     },
     {
@@ -6320,7 +6320,7 @@
       "context": "import",
       "deferred": true,
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L492",
+      "source_location": "L531",
       "weight": 1.0
     },
     {
@@ -6333,7 +6333,7 @@
       "context": "import",
       "deferred": true,
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L557",
+      "source_location": "L596",
       "weight": 1.0
     },
     {
@@ -7029,7 +7029,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L41",
+      "source_location": "L42",
       "weight": 1.0
     },
     {
@@ -7041,7 +7041,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0
     },
     {
@@ -7053,7 +7053,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L43",
+      "source_location": "L44",
       "weight": 1.0
     },
     {
@@ -7065,7 +7065,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L44",
+      "source_location": "L45",
       "weight": 1.0
     },
     {
@@ -7077,7 +7077,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L44",
+      "source_location": "L45",
       "weight": 1.0
     },
     {
@@ -7089,7 +7089,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L45",
+      "source_location": "L46",
       "weight": 1.0
     },
     {
@@ -7101,7 +7101,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L46",
+      "source_location": "L47",
       "weight": 1.0
     },
     {
@@ -7113,7 +7113,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L47",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -7125,7 +7125,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L47",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -7137,7 +7137,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L47",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -7149,7 +7149,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L52",
+      "source_location": "L53",
       "weight": 1.0
     },
     {
@@ -7161,7 +7161,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L53",
+      "source_location": "L54",
       "weight": 1.0
     },
     {
@@ -7173,7 +7173,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L53",
+      "source_location": "L54",
       "weight": 1.0
     },
     {
@@ -7185,7 +7185,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L54",
+      "source_location": "L55",
       "weight": 1.0
     },
     {
@@ -7197,7 +7197,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L55",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -7209,7 +7209,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L55",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -7221,7 +7221,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L55",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -7233,7 +7233,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L55",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -7245,7 +7245,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L55",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -7257,7 +7257,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L62",
+      "source_location": "L63",
       "weight": 1.0
     },
     {
@@ -7269,7 +7269,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L63",
+      "source_location": "L64",
       "weight": 1.0
     },
     {
@@ -7281,7 +7281,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L63",
+      "source_location": "L64",
       "weight": 1.0
     },
     {
@@ -8889,7 +8889,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L41",
+      "source_location": "L42",
       "weight": 1.0
     },
     {
@@ -8901,7 +8901,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0
     },
     {
@@ -8913,7 +8913,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L43",
+      "source_location": "L44",
       "weight": 1.0
     },
     {
@@ -8925,7 +8925,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L44",
+      "source_location": "L45",
       "weight": 1.0
     },
     {
@@ -8937,7 +8937,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L45",
+      "source_location": "L46",
       "weight": 1.0
     },
     {
@@ -8949,7 +8949,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L46",
+      "source_location": "L47",
       "weight": 1.0
     },
     {
@@ -8961,7 +8961,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L47",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -8973,7 +8973,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L52",
+      "source_location": "L53",
       "weight": 1.0
     },
     {
@@ -8985,7 +8985,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L53",
+      "source_location": "L54",
       "weight": 1.0
     },
     {
@@ -8997,7 +8997,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L54",
+      "source_location": "L55",
       "weight": 1.0
     },
     {
@@ -9009,7 +9009,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L55",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -9021,7 +9021,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L62",
+      "source_location": "L63",
       "weight": 1.0
     },
     {
@@ -9033,7 +9033,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L63",
+      "source_location": "L64",
       "weight": 1.0
     },
     {
@@ -10562,7 +10562,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L66",
+      "source_location": "L67",
       "weight": 1.0
     },
     {
@@ -12476,7 +12476,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/functions/server/index.tsx",
-      "source_location": "L590",
+      "source_location": "L644",
       "weight": 1.0
     },
     {
@@ -13044,5 +13044,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "0d005db7380892d368681f8df92ac8f9275d58db"
+  "built_at_commit": "04d5044ae2c55f9af43ba89c867aedf605af194f"
 }

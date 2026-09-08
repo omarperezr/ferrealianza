@@ -36,7 +36,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "clientformdialogprops",
       "source_file": "src/app/components/ClientFormDialog.tsx",
@@ -49,7 +49,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "props",
       "source_file": "src/app/components/ClientVendorsDialog.tsx",
@@ -62,50 +62,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "vendor",
       "source_file": "src/app/components/ClientVendorsDialog.tsx",
       "source_location": "L13"
-    },
-    {
-      "id": "src_app_components_salespanel_cartitem",
-      "label": "CartItem",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "SalesPanel.tsx",
-      "file_type": "code",
-      "norm_label": "cartitem",
-      "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L63"
-    },
-    {
-      "id": "src_app_components_salespanel_persistedcart",
-      "label": "PersistedCart",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "SalesPanel.tsx",
-      "file_type": "code",
-      "norm_label": "persistedcart",
-      "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L70"
-    },
-    {
-      "id": "src_app_components_salespanel_product",
-      "label": "Product",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "SalesPanel.tsx",
-      "file_type": "code",
-      "norm_label": "product",
-      "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L53"
     },
     {
       "id": "src_app_utils_datastore_client",
@@ -114,7 +75,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "client",
       "source_file": "src/app/utils/dataStore.ts",
@@ -127,7 +88,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "buttonprops",
       "source_file": "src/components/ui/button.tsx",
@@ -140,7 +101,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "inputprops",
       "source_file": "src/components/ui/input.tsx",
@@ -348,7 +309,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "filterprops",
       "source_file": "src/app/components/ClientControls.tsx",
@@ -361,7 +322,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "sortprops",
       "source_file": "src/app/components/ClientControls.tsx",
@@ -374,11 +335,76 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "vendor",
       "source_file": "src/app/components/ClientControls.tsx",
       "source_location": "L127"
+    },
+    {
+      "id": "src_app_components_salespanel_cartitem",
+      "label": "CartItem",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "cartitem",
+      "source_file": "src/app/components/SalesPanel.tsx",
+      "source_location": "L80"
+    },
+    {
+      "id": "src_app_components_salespanel_persistedcart",
+      "label": "PersistedCart",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "persistedcart",
+      "source_file": "src/app/components/SalesPanel.tsx",
+      "source_location": "L87"
+    },
+    {
+      "id": "src_app_components_salespanel_product",
+      "label": "Product",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "product",
+      "source_file": "src/app/components/SalesPanel.tsx",
+      "source_location": "L70"
+    },
+    {
+      "id": "src_app_utils_share_shareableproduct",
+      "label": "ShareableProduct",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "shareableproduct",
+      "source_file": "src/app/utils/share.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_app_utils_share_shareresult",
+      "label": "ShareResult",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "shareresult",
+      "source_file": "src/app/utils/share.ts",
+      "source_location": "L10"
     },
     {
       "id": "src_app_utils_sortclients_clientfilters",
@@ -387,7 +413,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "clientfilters",
       "source_file": "src/app/utils/sortClients.ts",
@@ -400,7 +426,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "clientsortfield",
       "source_file": "src/app/utils/sortClients.ts",
@@ -413,7 +439,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "clientsortoption",
       "source_file": "src/app/utils/sortClients.ts",
@@ -426,37 +452,50 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "tristate",
       "source_file": "src/app/utils/sortClients.ts",
       "source_location": "L22"
     },
     {
-      "id": "src_app_utils_share_shareableproduct",
-      "label": "ShareableProduct",
+      "id": "src_app_utils_clientsimport_field",
+      "label": "Field",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 4,
-      "community_name": "share.ts",
+      "community_name": "clientsImport.ts",
       "file_type": "code",
-      "norm_label": "shareableproduct",
-      "source_file": "src/app/utils/share.ts",
-      "source_location": "L1"
+      "norm_label": "field",
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L13"
     },
     {
-      "id": "src_app_utils_share_shareresult",
-      "label": "ShareResult",
+      "id": "src_app_utils_clientsimport_importedclient",
+      "label": "ImportedClient",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 4,
-      "community_name": "share.ts",
+      "community_name": "clientsImport.ts",
       "file_type": "code",
-      "norm_label": "shareresult",
-      "source_file": "src/app/utils/share.ts",
-      "source_location": "L10"
+      "norm_label": "importedclient",
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L5"
+    },
+    {
+      "id": "src_app_utils_clientsimport_parsedclients",
+      "label": "ParsedClients",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "clientsImport.ts",
+      "file_type": "code",
+      "norm_label": "parsedclients",
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L43"
     },
     {
       "id": "src_app_utils_excelimport_columnmap",
@@ -507,7 +546,19 @@
       "file_type": "code",
       "norm_label": "admindashboard()",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L65"
+      "source_location": "L66"
+    },
+    {
+      "id": "src_app_components_clientformdialog_clientformdialog",
+      "label": "ClientFormDialog()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "AdminDashboard.tsx",
+      "file_type": "code",
+      "norm_label": "clientformdialog()",
+      "source_file": "src/app/components/ClientFormDialog.tsx",
+      "source_location": "L30"
     },
     {
       "id": "src_app_components_clientvendorsdialog_clientvendorsdialog",
@@ -520,42 +571,6 @@
       "norm_label": "clientvendorsdialog()",
       "source_file": "src/app/components/ClientVendorsDialog.tsx",
       "source_location": "L27"
-    },
-    {
-      "id": "src_app_components_offlinesync_offlinesync",
-      "label": "OfflineSync()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "AdminDashboard.tsx",
-      "file_type": "code",
-      "norm_label": "offlinesync()",
-      "source_file": "src/app/components/OfflineSync.tsx",
-      "source_location": "L11"
-    },
-    {
-      "id": "src_app_components_salespanel_clamppercent",
-      "label": "clampPercent()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "AdminDashboard.tsx",
-      "file_type": "code",
-      "norm_label": "clamppercent()",
-      "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L97"
-    },
-    {
-      "id": "src_app_components_salespanel_salespanel",
-      "label": "SalesPanel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "AdminDashboard.tsx",
-      "file_type": "code",
-      "norm_label": "salespanel()",
-      "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L119"
     },
     {
       "id": "src_app_utils_api_apifetch",
@@ -762,18 +777,6 @@
       "source_location": "L82"
     },
     {
-      "id": "src_app_utils_datastore_pendingcount",
-      "label": "pendingCount()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "AdminDashboard.tsx",
-      "file_type": "code",
-      "norm_label": "pendingcount()",
-      "source_file": "src/app/utils/dataStore.ts",
-      "source_location": "L46"
-    },
-    {
       "id": "src_app_utils_datastore_saveclient",
       "label": "saveClient()",
       "_callable": true,
@@ -906,96 +909,12 @@
       "source_location": "L44"
     },
     {
-      "id": "src_app_utils_sortclients_sortclients",
-      "label": "sortClients()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "AdminDashboard.tsx",
-      "file_type": "code",
-      "norm_label": "sortclients()",
-      "source_file": "src/app/utils/sortClients.ts",
-      "source_location": "L75"
-    },
-    {
-      "id": "src_app_utils_sortproducts_filterproducts",
-      "label": "filterProducts()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "AdminDashboard.tsx",
-      "file_type": "code",
-      "norm_label": "filterproducts()",
-      "source_file": "src/app/utils/sortProducts.ts",
-      "source_location": "L39"
-    },
-    {
-      "id": "src_app_utils_sortproducts_sortproducts",
-      "label": "sortProducts()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "AdminDashboard.tsx",
-      "file_type": "code",
-      "norm_label": "sortproducts()",
-      "source_file": "src/app/utils/sortProducts.ts",
-      "source_location": "L64"
-    },
-    {
-      "id": "src_app_utils_usepersistentstate_usepersistentstate",
-      "label": "usePersistentState()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "AdminDashboard.tsx",
-      "file_type": "code",
-      "norm_label": "usepersistentstate()",
-      "source_file": "src/app/utils/usePersistentState.ts",
-      "source_location": "L8"
-    },
-    {
-      "id": "src_app_components_clientformdialog_clientformdialog",
-      "label": "ClientFormDialog()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "SalesPanel.tsx",
-      "file_type": "code",
-      "norm_label": "clientformdialog()",
-      "source_file": "src/app/components/ClientFormDialog.tsx",
-      "source_location": "L30"
-    },
-    {
-      "id": "src_app_components_salespanel_loadpersistedcart",
-      "label": "loadPersistedCart()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "SalesPanel.tsx",
-      "file_type": "code",
-      "norm_label": "loadpersistedcart()",
-      "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L99"
-    },
-    {
-      "id": "src_app_components_salespanel_sanitizecartitem",
-      "label": "sanitizeCartItem()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "SalesPanel.tsx",
-      "file_type": "code",
-      "norm_label": "sanitizecartitem()",
-      "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L79"
-    },
-    {
       "id": "src_components_ui_dialog_dialogfooter",
       "label": "DialogFooter()",
       "_callable": true,
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "dialogfooter()",
       "source_file": "src/components/ui/dialog.tsx",
@@ -1007,7 +926,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "dialogheader()",
       "source_file": "src/components/ui/dialog.tsx",
@@ -1019,11 +938,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "cn()",
       "source_file": "src/lib/utils.ts",
       "source_location": "L4"
+    },
+    {
+      "id": "src_app_utils_clientsimport_test_tosheets",
+      "label": "toSheets()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "clientsImport.test.mjs",
+      "file_type": "code",
+      "norm_label": "tosheets()",
+      "source_file": "src/app/utils/clientsImport.test.mjs",
+      "source_location": "L19"
     },
     {
       "id": "supabase_functions_server_index_adminmiddleware",
@@ -1035,7 +966,7 @@
       "file_type": "code",
       "norm_label": "adminmiddleware()",
       "source_file": "supabase/functions/server/index.tsx",
-      "source_location": "L94"
+      "source_location": "L97"
     },
     {
       "id": "supabase_functions_server_index_authmiddleware",
@@ -1047,7 +978,7 @@
       "file_type": "code",
       "norm_label": "authmiddleware()",
       "source_file": "supabase/functions/server/index.tsx",
-      "source_location": "L76"
+      "source_location": "L79"
     },
     {
       "id": "supabase_functions_server_index_clientvisibleto",
@@ -1059,7 +990,19 @@
       "file_type": "code",
       "norm_label": "clientvisibleto()",
       "source_file": "supabase/functions/server/index.tsx",
-      "source_location": "L587"
+      "source_location": "L590"
+    },
+    {
+      "id": "supabase_functions_server_index_errmsg",
+      "label": "errMsg()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "kv_store.tsx",
+      "file_type": "code",
+      "norm_label": "errmsg()",
+      "source_file": "supabase/functions/server/index.tsx",
+      "source_location": "L11"
     },
     {
       "id": "supabase_functions_server_index_getanonclient",
@@ -1071,7 +1014,7 @@
       "file_type": "code",
       "norm_label": "getanonclient()",
       "source_file": "supabase/functions/server/index.tsx",
-      "source_location": "L15"
+      "source_location": "L18"
     },
     {
       "id": "supabase_functions_server_index_getserviceclient",
@@ -1083,7 +1026,7 @@
       "file_type": "code",
       "norm_label": "getserviceclient()",
       "source_file": "supabase/functions/server/index.tsx",
-      "source_location": "L10"
+      "source_location": "L13"
     },
     {
       "id": "supabase_functions_server_kv_store_client",
@@ -1314,6 +1257,18 @@
       "source_location": "L36"
     },
     {
+      "id": "src_app_utils_sortproducts_sortproducts",
+      "label": "sortProducts()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "ProductSortControl.tsx",
+      "file_type": "code",
+      "norm_label": "sortproducts()",
+      "source_file": "src/app/utils/sortProducts.ts",
+      "source_location": "L64"
+    },
+    {
       "id": "src_components_ui_popover_popover",
       "label": "Popover()",
       "_callable": true,
@@ -1470,6 +1425,18 @@
       "source_location": "L3"
     },
     {
+      "id": "src_app_components_offlinesync_offlinesync",
+      "label": "OfflineSync()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "AuthContext.tsx",
+      "file_type": "code",
+      "norm_label": "offlinesync()",
+      "source_file": "src/app/components/OfflineSync.tsx",
+      "source_location": "L11"
+    },
+    {
       "id": "src_app_components_profilebutton_profilebutton",
       "label": "ProfileButton()",
       "_callable": true,
@@ -1506,6 +1473,18 @@
       "source_location": "L24"
     },
     {
+      "id": "src_app_utils_datastore_pendingcount",
+      "label": "pendingCount()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "AuthContext.tsx",
+      "file_type": "code",
+      "norm_label": "pendingcount()",
+      "source_file": "src/app/utils/dataStore.ts",
+      "source_location": "L46"
+    },
+    {
       "id": "src_main_showfatalerror",
       "label": "showFatalError()",
       "_callable": true,
@@ -1523,7 +1502,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "clientfiltercontrol()",
       "source_file": "src/app/components/ClientControls.tsx",
@@ -1535,11 +1514,95 @@
       "_callable": true,
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "clientsortcontrol()",
       "source_file": "src/app/components/ClientControls.tsx",
       "source_location": "L23"
+    },
+    {
+      "id": "src_app_components_salespanel_clamppercent",
+      "label": "clampPercent()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "clamppercent()",
+      "source_file": "src/app/components/SalesPanel.tsx",
+      "source_location": "L114"
+    },
+    {
+      "id": "src_app_components_salespanel_loadimageasdataurl",
+      "label": "loadImageAsDataUrl()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "loadimageasdataurl()",
+      "source_file": "src/app/components/SalesPanel.tsx",
+      "source_location": "L54"
+    },
+    {
+      "id": "src_app_components_salespanel_loadpersistedcart",
+      "label": "loadPersistedCart()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "loadpersistedcart()",
+      "source_file": "src/app/components/SalesPanel.tsx",
+      "source_location": "L116"
+    },
+    {
+      "id": "src_app_components_salespanel_salespanel",
+      "label": "SalesPanel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "salespanel()",
+      "source_file": "src/app/components/SalesPanel.tsx",
+      "source_location": "L136"
+    },
+    {
+      "id": "src_app_components_salespanel_sanitizecartitem",
+      "label": "sanitizeCartItem()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "sanitizecartitem()",
+      "source_file": "src/app/components/SalesPanel.tsx",
+      "source_location": "L96"
+    },
+    {
+      "id": "src_app_utils_share_buildproducttext",
+      "label": "buildProductText()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "buildproducttext()",
+      "source_file": "src/app/utils/share.ts",
+      "source_location": "L12"
+    },
+    {
+      "id": "src_app_utils_share_shareproduct",
+      "label": "shareProduct()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "shareproduct()",
+      "source_file": "src/app/utils/share.ts",
+      "source_location": "L34"
     },
     {
       "id": "src_app_utils_sortclients_activefiltercount",
@@ -1547,7 +1610,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "activefiltercount()",
       "source_file": "src/app/utils/sortClients.ts",
@@ -1559,7 +1622,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "clientdirof()",
       "source_file": "src/app/utils/sortClients.ts",
@@ -1571,7 +1634,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "clientfieldof()",
       "source_file": "src/app/utils/sortClients.ts",
@@ -1583,7 +1646,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "compareclientby()",
       "source_file": "src/app/utils/sortClients.ts",
@@ -1595,7 +1658,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "filterclients()",
       "source_file": "src/app/utils/sortClients.ts",
@@ -1607,7 +1670,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "hasvendor()",
       "source_file": "src/app/utils/sortClients.ts",
@@ -1619,35 +1682,95 @@
       "_callable": true,
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "matchestri()",
       "source_file": "src/app/utils/sortClients.ts",
       "source_location": "L44"
     },
     {
-      "id": "src_app_utils_share_buildproducttext",
-      "label": "buildProductText()",
+      "id": "src_app_utils_sortclients_sortclients",
+      "label": "sortClients()",
       "_callable": true,
       "_origin": "ast",
-      "community": 4,
-      "community_name": "share.ts",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
-      "norm_label": "buildproducttext()",
-      "source_file": "src/app/utils/share.ts",
-      "source_location": "L12"
+      "norm_label": "sortclients()",
+      "source_file": "src/app/utils/sortClients.ts",
+      "source_location": "L75"
     },
     {
-      "id": "src_app_utils_share_shareproduct",
-      "label": "shareProduct()",
+      "id": "src_app_utils_sortproducts_filterproducts",
+      "label": "filterProducts()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "filterproducts()",
+      "source_file": "src/app/utils/sortProducts.ts",
+      "source_location": "L39"
+    },
+    {
+      "id": "src_app_utils_usepersistentstate_usepersistentstate",
+      "label": "usePersistentState()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "usepersistentstate()",
+      "source_file": "src/app/utils/usePersistentState.ts",
+      "source_location": "L8"
+    },
+    {
+      "id": "src_app_utils_clientsimport_findcol",
+      "label": "findCol()",
       "_callable": true,
       "_origin": "ast",
       "community": 4,
-      "community_name": "share.ts",
+      "community_name": "clientsImport.ts",
       "file_type": "code",
-      "norm_label": "shareproduct()",
-      "source_file": "src/app/utils/share.ts",
-      "source_location": "L34"
+      "norm_label": "findcol()",
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L35"
+    },
+    {
+      "id": "src_app_utils_clientsimport_norm",
+      "label": "norm()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "clientsImport.ts",
+      "file_type": "code",
+      "norm_label": "norm()",
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L24"
+    },
+    {
+      "id": "src_app_utils_clientsimport_parseclientrows",
+      "label": "parseClientRows()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "clientsImport.ts",
+      "file_type": "code",
+      "norm_label": "parseclientrows()",
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L51"
+    },
+    {
+      "id": "src_app_utils_clientsimport_rifkeyof",
+      "label": "rifKeyOf()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "clientsImport.ts",
+      "file_type": "code",
+      "norm_label": "rifkeyof()",
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L32"
     },
     {
       "id": "src_app_utils_excelimport_detectheader",
@@ -1853,17 +1976,6 @@
       "source_location": "L1"
     },
     {
-      "id": "src_app_components_offlinesync",
-      "label": "OfflineSync.tsx",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "AdminDashboard.tsx",
-      "file_type": "code",
-      "norm_label": "offlinesync.tsx",
-      "source_file": "src/app/components/OfflineSync.tsx",
-      "source_location": "L1"
-    },
-    {
       "id": "src_app_utils_datastore",
       "label": "dataStore.ts",
       "_origin": "ast",
@@ -1897,22 +2009,11 @@
       "source_location": "L1"
     },
     {
-      "id": "src_app_utils_usepersistentstate",
-      "label": "usePersistentState.ts",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "AdminDashboard.tsx",
-      "file_type": "code",
-      "norm_label": "usepersistentstate.ts",
-      "source_file": "src/app/utils/usePersistentState.ts",
-      "source_location": "L1"
-    },
-    {
       "id": "src_app_components_clientformdialog",
       "label": "ClientFormDialog.tsx",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "clientformdialog.tsx",
       "source_file": "src/app/components/ClientFormDialog.tsx",
@@ -1923,7 +2024,7 @@
       "label": "empty",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "empty",
       "source_file": "src/app/components/ClientFormDialog.tsx",
@@ -1934,7 +2035,7 @@
       "label": "ClientVendorsDialog.tsx",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "clientvendorsdialog.tsx",
       "source_file": "src/app/components/ClientVendorsDialog.tsx",
@@ -1945,7 +2046,7 @@
       "label": "LoginPage.tsx",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "loginpage.tsx",
       "source_file": "src/app/components/LoginPage.tsx",
@@ -1956,21 +2057,10 @@
       "label": "ProfileButton.tsx",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "profilebutton.tsx",
       "source_file": "src/app/components/ProfileButton.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_app_components_salespanel",
-      "label": "SalesPanel.tsx",
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "SalesPanel.tsx",
-      "file_type": "code",
-      "norm_label": "salespanel.tsx",
-      "source_file": "src/app/components/SalesPanel.tsx",
       "source_location": "L1"
     },
     {
@@ -1978,7 +2068,7 @@
       "label": "UserManagement.tsx",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "usermanagement.tsx",
       "source_file": "src/app/components/UserManagement.tsx",
@@ -1989,7 +2079,7 @@
       "label": "button.tsx",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "button.tsx",
       "source_file": "src/components/ui/button.tsx",
@@ -2000,7 +2090,7 @@
       "label": "Button",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "button",
       "source_file": "src/components/ui/button.tsx",
@@ -2011,7 +2101,7 @@
       "label": "buttonVariants",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "buttonvariants",
       "source_file": "src/components/ui/button.tsx",
@@ -2022,7 +2112,7 @@
       "label": "card.tsx",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "card.tsx",
       "source_file": "src/components/ui/card.tsx",
@@ -2033,7 +2123,7 @@
       "label": "Card",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "card",
       "source_file": "src/components/ui/card.tsx",
@@ -2044,7 +2134,7 @@
       "label": "CardContent",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "cardcontent",
       "source_file": "src/components/ui/card.tsx",
@@ -2055,7 +2145,7 @@
       "label": "CardDescription",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "carddescription",
       "source_file": "src/components/ui/card.tsx",
@@ -2066,7 +2156,7 @@
       "label": "CardHeader",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "cardheader",
       "source_file": "src/components/ui/card.tsx",
@@ -2077,7 +2167,7 @@
       "label": "CardTitle",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "cardtitle",
       "source_file": "src/components/ui/card.tsx",
@@ -2088,7 +2178,7 @@
       "label": "dialog.tsx",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "dialog.tsx",
       "source_file": "src/components/ui/dialog.tsx",
@@ -2099,7 +2189,7 @@
       "label": "DialogContent",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "dialogcontent",
       "source_file": "src/components/ui/dialog.tsx",
@@ -2110,7 +2200,7 @@
       "label": "DialogDescription",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "dialogdescription",
       "source_file": "src/components/ui/dialog.tsx",
@@ -2121,7 +2211,7 @@
       "label": "DialogOverlay",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "dialogoverlay",
       "source_file": "src/components/ui/dialog.tsx",
@@ -2132,7 +2222,7 @@
       "label": "DialogTitle",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "dialogtitle",
       "source_file": "src/components/ui/dialog.tsx",
@@ -2143,7 +2233,7 @@
       "label": "input.tsx",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "input.tsx",
       "source_file": "src/components/ui/input.tsx",
@@ -2154,7 +2244,7 @@
       "label": "Input",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "input",
       "source_file": "src/components/ui/input.tsx",
@@ -2165,7 +2255,7 @@
       "label": "label.tsx",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "label.tsx",
       "source_file": "src/components/ui/label.tsx",
@@ -2176,7 +2266,7 @@
       "label": "Label",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "label",
       "source_file": "src/components/ui/label.tsx",
@@ -2187,7 +2277,7 @@
       "label": "labelVariants",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "labelvariants",
       "source_file": "src/components/ui/label.tsx",
@@ -2198,7 +2288,7 @@
       "label": "utils.ts",
       "_origin": "ast",
       "community": 1,
-      "community_name": "SalesPanel.tsx",
+      "community_name": "cn",
       "file_type": "code",
       "norm_label": "utils.ts",
       "source_file": "src/lib/utils.ts",
@@ -2454,6 +2544,83 @@
       "file_type": "code",
       "norm_label": "xlsx",
       "source_file": "xlsx"
+    },
+    {
+      "id": "src_app_utils_clientsimport_test",
+      "label": "clientsImport.test.mjs",
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "clientsImport.test.mjs",
+      "file_type": "code",
+      "norm_label": "clientsimport.test.mjs",
+      "source_file": "src/app/utils/clientsImport.test.mjs",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_app_utils_clientsimport_test_alt",
+      "label": "alt",
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "clientsImport.test.mjs",
+      "file_type": "code",
+      "norm_label": "alt",
+      "source_file": "src/app/utils/clientsImport.test.mjs",
+      "source_location": "L62"
+    },
+    {
+      "id": "src_app_utils_clientsimport_test_clients_skipped_merged_sheet_error",
+      "label": "{ clients, skipped, merged, sheet, error }",
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "clientsImport.test.mjs",
+      "file_type": "code",
+      "norm_label": "{ clients, skipped, merged, sheet, error }",
+      "source_file": "src/app/utils/clientsImport.test.mjs",
+      "source_location": "L44"
+    },
+    {
+      "id": "src_app_utils_clientsimport_test_mod",
+      "label": "mod",
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "clientsImport.test.mjs",
+      "file_type": "code",
+      "norm_label": "mod",
+      "source_file": "src/app/utils/clientsImport.test.mjs",
+      "source_location": "L15"
+    },
+    {
+      "id": "src_app_utils_clientsimport_test_require",
+      "label": "require",
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "clientsImport.test.mjs",
+      "file_type": "code",
+      "norm_label": "require",
+      "source_file": "src/app/utils/clientsImport.test.mjs",
+      "source_location": "L9"
+    },
+    {
+      "id": "src_app_utils_clientsimport_test_wb",
+      "label": "wb",
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "clientsImport.test.mjs",
+      "file_type": "code",
+      "norm_label": "wb",
+      "source_file": "src/app/utils/clientsImport.test.mjs",
+      "source_location": "L25"
+    },
+    {
+      "id": "src_app_utils_clientsimport_test_xlsx",
+      "label": "XLSX",
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "clientsImport.test.mjs",
+      "file_type": "code",
+      "norm_label": "xlsx",
+      "source_file": "src/app/utils/clientsImport.test.mjs",
+      "source_location": "L10"
     },
     {
       "id": "supabase_functions_server_index",
@@ -3039,6 +3206,17 @@
       "source_location": "L1"
     },
     {
+      "id": "src_app_components_offlinesync",
+      "label": "OfflineSync.tsx",
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "AuthContext.tsx",
+      "file_type": "code",
+      "norm_label": "offlinesync.tsx",
+      "source_file": "src/app/components/OfflineSync.tsx",
+      "source_location": "L1"
+    },
+    {
       "id": "src_app_components_userdashboard",
       "label": "UserDashboard.tsx",
       "_origin": "ast",
@@ -3164,7 +3342,7 @@
       "label": "ClientControls.tsx",
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "clientcontrols.tsx",
       "source_file": "src/app/components/ClientControls.tsx",
@@ -3175,7 +3353,7 @@
       "label": "TRI_OPTIONS",
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "tri_options",
       "source_file": "src/app/components/ClientControls.tsx",
@@ -3186,18 +3364,40 @@
       "label": "TRI_ROWS",
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "tri_rows",
       "source_file": "src/app/components/ClientControls.tsx",
       "source_location": "L146"
     },
     {
+      "id": "src_app_components_salespanel",
+      "label": "SalesPanel.tsx",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "salespanel.tsx",
+      "source_file": "src/app/components/SalesPanel.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_app_utils_share",
+      "label": "share.ts",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "share.ts",
+      "source_file": "src/app/utils/share.ts",
+      "source_location": "L1"
+    },
+    {
       "id": "src_app_utils_sortclients",
       "label": "sortClients.ts",
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "sortclients.ts",
       "source_file": "src/app/utils/sortClients.ts",
@@ -3208,7 +3408,7 @@
       "label": "CLIENT_SORT_FIELDS",
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "client_sort_fields",
       "source_file": "src/app/utils/sortClients.ts",
@@ -3219,22 +3419,44 @@
       "label": "EMPTY_CLIENT_FILTERS",
       "_origin": "ast",
       "community": 3,
-      "community_name": "ClientControls.tsx",
+      "community_name": "SalesPanel.tsx",
       "file_type": "code",
       "norm_label": "empty_client_filters",
       "source_file": "src/app/utils/sortClients.ts",
       "source_location": "L30"
     },
     {
-      "id": "src_app_utils_share",
-      "label": "share.ts",
+      "id": "src_app_utils_usepersistentstate",
+      "label": "usePersistentState.ts",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "SalesPanel.tsx",
+      "file_type": "code",
+      "norm_label": "usepersistentstate.ts",
+      "source_file": "src/app/utils/usePersistentState.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_app_utils_clientsimport",
+      "label": "clientsImport.ts",
       "_origin": "ast",
       "community": 4,
-      "community_name": "share.ts",
+      "community_name": "clientsImport.ts",
       "file_type": "code",
-      "norm_label": "share.ts",
-      "source_file": "src/app/utils/share.ts",
+      "norm_label": "clientsimport.ts",
+      "source_file": "src/app/utils/clientsImport.ts",
       "source_location": "L1"
+    },
+    {
+      "id": "src_app_utils_clientsimport_cols",
+      "label": "COLS",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "clientsImport.ts",
+      "file_type": "code",
+      "norm_label": "cols",
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L16"
     },
     {
       "id": "package",
@@ -4057,7 +4279,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L112",
+      "source_location": "L113",
       "weight": 1.0
     },
     {
@@ -4069,7 +4291,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L113",
+      "source_location": "L114",
       "weight": 1.0
     },
     {
@@ -4081,7 +4303,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L122",
+      "source_location": "L123",
       "weight": 1.0
     },
     {
@@ -4093,7 +4315,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L135",
+      "source_location": "L136",
       "weight": 1.0
     },
     {
@@ -4105,7 +4327,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L163",
+      "source_location": "L164",
       "weight": 1.0
     },
     {
@@ -4117,7 +4339,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L191",
+      "source_location": "L192",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_components_admindashboard_admindashboard",
+      "target": "src_app_utils_clientsimport_parseclientrows",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/app/components/AdminDashboard.tsx",
+      "source_location": "L217",
       "weight": 1.0
     },
     {
@@ -4129,7 +4363,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L268",
+      "source_location": "L232",
       "weight": 1.0
     },
     {
@@ -4141,7 +4375,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L288",
+      "source_location": "L260",
       "weight": 1.0
     },
     {
@@ -4153,7 +4387,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L312",
+      "source_location": "L284",
       "weight": 1.0
     },
     {
@@ -4165,7 +4399,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L329",
+      "source_location": "L301",
       "weight": 1.0
     },
     {
@@ -4177,7 +4411,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L338",
+      "source_location": "L310",
       "weight": 1.0
     },
     {
@@ -4189,7 +4423,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L363",
+      "source_location": "L335",
       "weight": 1.0
     },
     {
@@ -4201,7 +4435,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L392",
+      "source_location": "L364",
       "weight": 1.0
     },
     {
@@ -4213,7 +4447,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L450",
+      "source_location": "L422",
       "weight": 1.0
     },
     {
@@ -4225,7 +4459,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L455",
+      "source_location": "L427",
       "weight": 1.0
     },
     {
@@ -4237,7 +4471,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L658",
+      "source_location": "L630",
       "weight": 1.0
     },
     {
@@ -4249,7 +4483,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L658",
+      "source_location": "L630",
       "weight": 1.0
     },
     {
@@ -4261,19 +4495,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L659",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app_components_admindashboard_admindashboard",
-      "target": "src_app_components_authcontext_useauth",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L66",
+      "source_location": "L631",
       "weight": 1.0
     },
     {
@@ -4285,7 +4507,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L660",
+      "source_location": "L632",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_components_admindashboard_admindashboard",
+      "target": "src_app_components_authcontext_useauth",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/app/components/AdminDashboard.tsx",
+      "source_location": "L67",
       "weight": 1.0
     },
     {
@@ -4297,7 +4531,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L90",
+      "source_location": "L91",
       "weight": 1.0
     },
     {
@@ -4489,7 +4723,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L120",
+      "source_location": "L137",
       "weight": 1.0
     },
     {
@@ -4501,7 +4735,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L122",
+      "source_location": "L139",
       "weight": 1.0
     },
     {
@@ -4513,7 +4747,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L128",
+      "source_location": "L145",
       "weight": 1.0
     },
     {
@@ -4525,7 +4759,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L149",
+      "source_location": "L166",
       "weight": 1.0
     },
     {
@@ -4537,7 +4771,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L150",
+      "source_location": "L167",
       "weight": 1.0
     },
     {
@@ -4549,7 +4783,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L159",
+      "source_location": "L176",
       "weight": 1.0
     },
     {
@@ -4561,7 +4795,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L160",
+      "source_location": "L177",
       "weight": 1.0
     },
     {
@@ -4573,7 +4807,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L214",
+      "source_location": "L232",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_components_salespanel_salespanel",
+      "target": "src_app_components_salespanel_loadimageasdataurl",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/app/components/SalesPanel.tsx",
+      "source_location": "L331",
       "weight": 1.0
     },
     {
@@ -4585,7 +4831,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L546",
+      "source_location": "L571",
       "weight": 1.0
     },
     {
@@ -4597,7 +4843,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L547",
+      "source_location": "L572",
       "weight": 1.0
     },
     {
@@ -4609,7 +4855,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L553",
+      "source_location": "L578",
       "weight": 1.0
     },
     {
@@ -4621,7 +4867,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L554",
+      "source_location": "L579",
       "weight": 1.0
     },
     {
@@ -4633,7 +4879,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L803",
+      "source_location": "L828",
       "weight": 1.0
     },
     {
@@ -4658,6 +4904,30 @@
       "context": "call",
       "source_file": "src/app/components/UserManagement.tsx",
       "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport_parseclientrows",
+      "target": "src_app_utils_clientsimport_findcol",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L58",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport_parseclientrows",
+      "target": "src_app_utils_clientsimport_rifkeyof",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L85",
       "weight": 1.0
     },
     {
@@ -5869,7 +6139,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "supabase/functions/server/index.tsx",
-      "source_location": "L82",
+      "source_location": "L85",
       "weight": 1.0
     },
     {
@@ -6050,7 +6320,7 @@
       "context": "import",
       "deferred": true,
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L520",
+      "source_location": "L492",
       "weight": 1.0
     },
     {
@@ -6063,7 +6333,7 @@
       "context": "import",
       "deferred": true,
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L585",
+      "source_location": "L557",
       "weight": 1.0
     },
     {
@@ -6908,7 +7178,7 @@
     },
     {
       "source": "src_app_components_admindashboard",
-      "target": "src_app_utils_sortclients_clientfilters",
+      "target": "src_app_utils_clientsimport_parseclientrows",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -6916,6 +7186,18 @@
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
       "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_components_admindashboard",
+      "target": "src_app_utils_sortclients_clientfilters",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/app/components/AdminDashboard.tsx",
+      "source_location": "L55",
       "weight": 1.0
     },
     {
@@ -6927,7 +7209,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L54",
+      "source_location": "L55",
       "weight": 1.0
     },
     {
@@ -6939,7 +7221,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L54",
+      "source_location": "L55",
       "weight": 1.0
     },
     {
@@ -6951,7 +7233,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L54",
+      "source_location": "L55",
       "weight": 1.0
     },
     {
@@ -6963,7 +7245,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L54",
+      "source_location": "L55",
       "weight": 1.0
     },
     {
@@ -6975,7 +7257,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L61",
+      "source_location": "L62",
       "weight": 1.0
     },
     {
@@ -6987,7 +7269,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L62",
+      "source_location": "L63",
       "weight": 1.0
     },
     {
@@ -6999,7 +7281,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L62",
+      "source_location": "L63",
       "weight": 1.0
     },
     {
@@ -7899,7 +8181,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L37",
+      "source_location": "L38",
       "weight": 1.0
     },
     {
@@ -7911,7 +8193,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L37",
+      "source_location": "L38",
       "weight": 1.0
     },
     {
@@ -7923,7 +8205,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L37",
+      "source_location": "L38",
       "weight": 1.0
     },
     {
@@ -7983,7 +8265,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0
     },
     {
@@ -7995,7 +8277,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0
     },
     {
@@ -8007,7 +8289,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0
     },
     {
@@ -8019,7 +8301,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0
     },
     {
@@ -8031,7 +8313,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0
     },
     {
@@ -8043,7 +8325,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L49",
+      "source_location": "L50",
       "weight": 1.0
     },
     {
@@ -8055,7 +8337,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L49",
+      "source_location": "L50",
       "weight": 1.0
     },
     {
@@ -8067,7 +8349,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L50",
+      "source_location": "L51",
       "weight": 1.0
     },
     {
@@ -8079,7 +8361,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L51",
+      "source_location": "L52",
       "weight": 1.0
     },
     {
@@ -8708,7 +8990,7 @@
     },
     {
       "source": "src_app_components_admindashboard",
-      "target": "src_app_utils_sortclients",
+      "target": "src_app_utils_clientsimport",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -8720,6 +9002,18 @@
     },
     {
       "source": "src_app_components_admindashboard",
+      "target": "src_app_utils_sortclients",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/app/components/AdminDashboard.tsx",
+      "source_location": "L55",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_components_admindashboard",
       "target": "src_app_utils_usepersistentstate",
       "relation": "imports_from",
       "_origin": "ast",
@@ -8727,7 +9021,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L61",
+      "source_location": "L62",
       "weight": 1.0
     },
     {
@@ -8739,7 +9033,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L62",
+      "source_location": "L63",
       "weight": 1.0
     },
     {
@@ -9183,7 +9477,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L37",
+      "source_location": "L38",
       "weight": 1.0
     },
     {
@@ -9207,7 +9501,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0
     },
     {
@@ -9219,7 +9513,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L49",
+      "source_location": "L50",
       "weight": 1.0
     },
     {
@@ -9231,7 +9525,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L50",
+      "source_location": "L51",
       "weight": 1.0
     },
     {
@@ -9243,7 +9537,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L51",
+      "source_location": "L52",
       "weight": 1.0
     },
     {
@@ -9531,7 +9825,7 @@
       "confidence_score": 1.0,
       "context": "type",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L63",
+      "source_location": "L80",
       "weight": 1.0
     },
     {
@@ -10268,7 +10562,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/app/components/AdminDashboard.tsx",
-      "source_location": "L65",
+      "source_location": "L66",
       "weight": 1.0
     },
     {
@@ -10581,68 +10875,13 @@
     },
     {
       "source": "src_app_components_salespanel",
-      "target": "src_app_components_salespanel_salespanel",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L119",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app_components_salespanel",
-      "target": "src_app_components_salespanel_product",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L53",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app_components_salespanel",
-      "target": "src_app_components_salespanel_cartitem",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L63",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app_components_salespanel",
-      "target": "src_app_components_salespanel_persistedcart",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L70",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app_components_salespanel",
-      "target": "src_app_components_salespanel_sanitizecartitem",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L79",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app_components_salespanel",
       "target": "src_app_components_salespanel_clamppercent",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L97",
+      "source_location": "L114",
       "weight": 1.0
     },
     {
@@ -10653,7 +10892,73 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L99",
+      "source_location": "L116",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_components_salespanel",
+      "target": "src_app_components_salespanel_salespanel",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/components/SalesPanel.tsx",
+      "source_location": "L136",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_components_salespanel",
+      "target": "src_app_components_salespanel_loadimageasdataurl",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/components/SalesPanel.tsx",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_components_salespanel",
+      "target": "src_app_components_salespanel_product",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/components/SalesPanel.tsx",
+      "source_location": "L70",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_components_salespanel",
+      "target": "src_app_components_salespanel_cartitem",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/components/SalesPanel.tsx",
+      "source_location": "L80",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_components_salespanel",
+      "target": "src_app_components_salespanel_persistedcart",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/components/SalesPanel.tsx",
+      "source_location": "L87",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_components_salespanel",
+      "target": "src_app_components_salespanel_sanitizecartitem",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/components/SalesPanel.tsx",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -10698,6 +11003,171 @@
       "confidence_score": 1.0,
       "source_file": "src/app/utils/api.ts",
       "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport",
+      "target": "src_app_utils_clientsimport_field",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport",
+      "target": "src_app_utils_clientsimport_cols",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport",
+      "target": "src_app_utils_clientsimport_norm",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport",
+      "target": "src_app_utils_clientsimport_rifkeyof",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport",
+      "target": "src_app_utils_clientsimport_findcol",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport",
+      "target": "src_app_utils_clientsimport_parsedclients",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L43",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport",
+      "target": "src_app_utils_clientsimport_importedclient",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport",
+      "target": "src_app_utils_clientsimport_parseclientrows",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L51",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport_test",
+      "target": "src_app_utils_clientsimport_test_xlsx",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/utils/clientsImport.test.mjs",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport_test",
+      "target": "src_app_utils_clientsimport_test_mod",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/utils/clientsImport.test.mjs",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport_test",
+      "target": "src_app_utils_clientsimport_test_tosheets",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/utils/clientsImport.test.mjs",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport_test",
+      "target": "src_app_utils_clientsimport_test_wb",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/utils/clientsImport.test.mjs",
+      "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport_test",
+      "target": "src_app_utils_clientsimport_test_clients_skipped_merged_sheet_error",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/utils/clientsImport.test.mjs",
+      "source_location": "L44",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport_test",
+      "target": "src_app_utils_clientsimport_test_alt",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/utils/clientsImport.test.mjs",
+      "source_location": "L62",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport_test",
+      "target": "src_app_utils_clientsimport_test_require",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/app/utils/clientsImport.test.mjs",
+      "source_location": "L9",
       "weight": 1.0
     },
     {
@@ -11967,13 +12437,24 @@
     },
     {
       "source": "supabase_functions_server_index",
+      "target": "supabase_functions_server_index_errmsg",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/functions/server/index.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "supabase_functions_server_index",
       "target": "supabase_functions_server_index_getserviceclient",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/functions/server/index.tsx",
-      "source_location": "L10",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -11984,7 +12465,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/functions/server/index.tsx",
-      "source_location": "L15",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -11995,7 +12476,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/functions/server/index.tsx",
-      "source_location": "L587",
+      "source_location": "L590",
       "weight": 1.0
     },
     {
@@ -12498,7 +12979,19 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "src/app/components/SalesPanel.tsx",
-      "source_location": "L106",
+      "source_location": "L123",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_utils_clientsimport_parseclientrows",
+      "target": "src_app_utils_clientsimport_norm",
+      "relation": "indirect_call",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "argument",
+      "source_file": "src/app/utils/clientsImport.ts",
+      "source_location": "L57",
       "weight": 1.0
     },
     {
@@ -12534,7 +13027,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "supabase/functions/server/index.tsx",
-      "source_location": "L176",
+      "source_location": "L179",
       "weight": 1.0
     },
     {
@@ -12546,7 +13039,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "supabase/functions/server/index.tsx",
-      "source_location": "L191",
+      "source_location": "L194",
       "weight": 1.0
     }
   ],

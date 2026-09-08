@@ -561,6 +561,60 @@ app.post("/make-server-745f9946/upload-image", authMiddleware, adminMiddleware, 
 
 // ===== VENDOR ROUTES =====
 
+// Delete product images no product references (admin only). Every upload
+// creates a new file and nothing ever removed old ones, so re-imports and
+// replaced/deleted products leave orphans behind. ?dry=1 only counts.
+app.post("/make-server-745f9946/images/prune", authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const dry = c.req.query('dry') === '1';
+    const supabase = getServiceClient();
+
+    const used = new Set<string>();
+    for (const p of await kv.getByPrefix('product:')) {
+      const m = String(p?.imageUrl || '').match(/\/object\/(?:sign|public)\/[^/]+\/([^?]+)/);
+      if (m) used.add(decodeURIComponent(m[1]));
+    }
+
+    // Files younger than 15 min may belong to an import still saving its products.
+    const cutoff = Date.now() - 15 * 60 * 1000;
+    const orphans: string[] = [];
+    let total = 0;
+    let bytes = 0;
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .list('', { limit: 1000, offset });
+      if (error) throw new Error(error.message);
+      for (const f of data || []) {
+        if (!f.id) continue; // folder placeholder
+        total++;
+        if (used.has(f.name) || new Date(f.created_at).getTime() > cutoff) continue;
+        orphans.push(f.name);
+        bytes += Number(f.metadata?.size || 0);
+      }
+      if (!data || data.length < 1000) break;
+    }
+
+    // ponytail: at most 1000 deletes per call to stay under the function time limit;
+    // the client keeps calling while `remaining` > 0.
+    let deleted = 0;
+    if (!dry) {
+      const todo = orphans.slice(0, 1000);
+      for (let i = 0; i < todo.length; i += 100) {
+        const batch = todo.slice(i, i + 100);
+        const { error } = await supabase.storage.from(BUCKET_NAME).remove(batch);
+        if (error) throw new Error(error.message);
+        deleted += batch.length;
+      }
+    }
+
+    return c.json({ dry, total, used: used.size, orphans: orphans.length, bytes, deleted, remaining: orphans.length - deleted });
+  } catch (error) {
+    console.log(`Error al borrar imágenes huérfanas: ${error}`);
+    return c.json({ error: `Error al borrar imágenes huérfanas: ${errMsg(error)}` }, 500);
+  }
+});
+
 // List vendors (admin only) - used to associate clients to vendors
 app.get("/make-server-745f9946/vendors", authMiddleware, adminMiddleware, async (c) => {
   try {
